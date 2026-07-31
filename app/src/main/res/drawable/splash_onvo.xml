@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Animated Onvo mark for the splash window.
+
+     The platform masks this drawable with the launcher shape and only the
+     inner two thirds are guaranteed visible. The artwork is authored on a
+     48 grid but drawn into a 72 viewport with a centring group, so the ring
+     sits well inside the safe zone instead of being clipped into a box. -->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="288dp" android:height="288dp"
+            android:viewportWidth="72" android:viewportHeight="72">
+
+            <group android:translateX="12" android:translateY="12">
+
+                <path
+                    android:name="ring"
+                    android:pathData="M24,8.5C32.5,8.5 39.5,15.5 39.5,24C39.5,32.5 32.5,39.5 24,39.5C15.5,39.5 8.5,32.5 8.5,24C8.5,15.5 15.5,8.5 24,8.5"
+                    android:strokeColor="#FF2FE3C0"
+                    android:strokeWidth="2.9"
+                    android:strokeLineCap="round"
+                    android:strokeLineJoin="round"
+                    android:trimPathStart="0"
+                    android:trimPathEnd="0" />
+
+                <group android:name="waveGroup" android:translateY="14">
+                    <path
+                        android:name="wave"
+                        android:pathData="M15.5,27.5C18,24 20.5,31 24,27.5C27.5,24 30,31 32.5,27.5"
+                        android:strokeColor="#FF2FE3C0"
+                        android:strokeWidth="2.4"
+                        android:strokeLineCap="round"
+                        android:strokeLineJoin="round"
+                        android:strokeAlpha="0" />
+                </group>
+
+                <group android:name="dotGroup" android:pivotX="24" android:pivotY="16"
+                    android:scaleX="0" android:scaleY="0">
+                    <path
+                        android:name="dot"
+                        android:pathData="M24,13.4A2.6,2.6 0,1 1,24 18.6A2.6,2.6 0,1 1,24 13.4"
+                        android:fillColor="#FF2FE3C0" />
+                </group>
+            </group>
+        </vector>
+    </aapt:attr>
+
+    <target android:name="ring">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="trimPathEnd"
+                android:valueFrom="0" android:valueTo="1"
+                android:duration="620"
+                android:interpolator="@android:interpolator/fast_out_slow_in" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="waveGroup">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="translateY"
+                android:valueFrom="14" android:valueTo="0"
+                android:startOffset="520" android:duration="420"
+                android:interpolator="@android:interpolator/decelerate_quad" />
+        </aapt:attr>
+    </target>
+    <target android:name="wave">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:propertyName="strokeAlpha"
+                android:valueFrom="0" android:valueTo="1"
+                android:startOffset="520" android:duration="300" />
+        </aapt:attr>
+    </target>
+
+    <target android:name="dotGroup">
+        <aapt:attr name="android:animation">
+            <set>
+                <objectAnimator android:propertyName="scaleX"
+                    android:valueFrom="0" android:valueTo="1"
+                    android:startOffset="860" android:duration="340"
+                    android:interpolator="@android:interpolator/overshoot" />
+                <objectAnimator android:propertyName="scaleY"
+                    android:valueFrom="0" android:valueTo="1"
+                    android:startOffset="860" android:duration="340"
+                    android:interpolator="@android:interpolator/overshoot" />
+            </set>
+        </aapt:attr>
+    </target>
+</animated-vector>
