@@ -1,0 +1,23 @@
+name: Make signing key
+on: workflow_dispatch
+jobs:
+  key:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore onvo-release.jks \
+            -alias onvo \
+            -keyalg RSA -keysize 4096 -validity 10000 \
+            -storepass "${{ github.run_id }}${{ github.run_number }}Onvo!" \
+            -keypass  "${{ github.run_id }}${{ github.run_number }}Onvo!" \
+            -dname "CN=Onvo, O=Onvo, C=DE"
+          base64 -w0 onvo-release.jks > keystore.b64
+          echo "::notice::PASSWORD IS ${{ github.run_id }}${{ github.run_number }}Onvo!"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signing-key
+          path: |
+            onvo-release.jks
+            keystore.b64
