@@ -1,0 +1,13 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+.DS_Store
+captures/
+*.jks
+*.keystore
+!debug.keystore
+!gradle/wrapper/gradle-wrapper.jar
+buildlogs/
+app/src/main/jniLibs/

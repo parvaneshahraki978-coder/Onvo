@@ -1,0 +1,145 @@
+<resources>
+    <string name="tagline">اتصال امن</string>
+
+    <string name="state_off">وصل نیستید</string>
+    <string name="state_connecting">در حال اتصال…</string>
+    <string name="state_on">متصل هستید</string>
+    <string name="hint_tap_connect">برای اتصال لمس کنید</string>
+    <string name="hint_tap_disconnect">برای قطع لمس کنید</string>
+    <string name="ready">آمادهٔ اتصال</string>
+    <string name="conn_time">زمان اتصال</string>
+
+    <string name="mode_auto">خودکار</string>
+    <string name="mode_fast">سریع</string>
+    <string name="mode_safe">امن</string>
+
+    <string name="pill_off">قطع</string>
+    <string name="pill_connecting">در حال اتصال</string>
+    <string name="pill_on">محافظت فعال</string>
+
+    <string name="step_network">بررسی شبکه</string>
+    <string name="step_route">پیدا کردن بهترین مسیر</string>
+    <string name="step_tunnel">برقراری تونل امن</string>
+    <string name="step_verify">آزمایش واقعی اتصال</string>
+    <string name="step_leak">بررسی نشتی اطلاعات</string>
+
+    <string name="all_tests_passed">هر ۵ آزمایش با موفقیت انجام شد</string>
+    <string name="really_connected">اتصال شما واقعاً برقرار است</string>
+    <string name="v_ip">آی‌پی عوض شده</string>
+    <string name="v_dns">بدون نشتی DNS</string>
+    <string name="v_v6">بدون نشتی IPv6</string>
+    <string name="v_thr">دانلود آزمایش شد</string>
+    <string name="v_udp">عبور UDP سالم</string>
+    <string name="v_stable">سرعت پایدار</string>
+
+    <string name="fail_title">اتصال برقرار نشد</string>
+    <string name="fail_all">همهٔ مسیرها امتحان شد و هیچ‌کدام ترافیک واقعی رد نکرد. ممکن است شبکهٔ شما در این لحظه همه را مسدود کرده باشد.</string>
+    <string name="fail_native_title">این نسخه ناقص است</string>
+    <string name="fail_native">موتور اتصال برای پردازندهٔ گوشی شما در برنامه نیست. این مشکل ساخت است نه شبکه — فایل APK بدون بخش‌های اصلی‌اش بسته‌بندی شده.</string>
+    <string name="fail_retry">تلاش دوباره</string>
+
+    <string name="not_protected">هنوز محافظت نشده‌اید</string>
+    <string name="not_protected_sub">دکمه را لمس کنید تا اتصال امن برقرار شود</string>
+
+    <string name="dl">دریافت</string>
+    <string name="ul">ارسال</string>
+
+    <string name="menu_home">خانه</string>
+    <string name="menu_health">گزارش سلامت اتصال</string>
+    <string name="menu_servers">سرورها و پروفایل‌ها</string>
+    <string name="menu_apps">انتخاب برنامه‌ها</string>
+    <string name="menu_advanced">تنظیمات پیشرفته</string>
+    <string name="menu_console">کنسول و لاگ</string>
+    <string name="menu_update">بروزرسانی</string>
+    <string name="menu_about">درباره برنامه</string>
+    <string name="grp_advanced">پیشرفته</string>
+
+    <string name="console_ok">همه‌چیز درست کار می‌کند</string>
+    <string name="console_ok_sub">در یک ساعت گذشته مشکلی پیش نیامده</string>
+    <string name="show_technical">نمایش جزئیات فنی</string>
+    <string name="show_technical_sub">برای کاربران حرفه‌ای</string>
+    <string name="copy_all">کپی همه</string>
+    <string name="copied">کپی شد ✓</string>
+
+    <string name="set_ai">هوش مصنوعی</string>
+    <string name="set_ai_local">انتخاب هوشمند مسیر</string>
+    <string name="set_ai_local_sub">یادگیری روی همین گوشی، بدون ارسال اطلاعات</string>
+    <string name="set_ai_cloud">کمک گرفتن از سرور</string>
+    <string name="set_ai_cloud_sub">ارسال آمار ناشناس برای نتیجهٔ بهتر</string>
+    <string name="set_ai_retry">تلاش مجدد خودکار</string>
+    <string name="set_ai_retry_sub">اگر آزمایش رد شد، مسیر بعدی</string>
+
+    <string name="set_dpi">روش عبور از فیلترینگ</string>
+    <string name="set_sni">جعل نام سایت</string>
+    <string name="set_sni_sub">بدون نیاز به روت</string>
+    <string name="set_frag">تکه‌تکه کردن بسته‌ها</string>
+    <string name="set_fakename">نام جعلی</string>
+    <string name="set_scan">شدت اسکن</string>
+
+    <string name="set_update">بروزرسانی</string>
+    <string name="set_notify_only">فقط اطلاع بده</string>
+    <string name="set_notify_only_sub">خودکار نصب نمی‌شود</string>
+    <string name="set_sig">بررسی امضای دیجیتال</string>
+    <string name="set_sig_sub">غیرقابل خاموش کردن</string>
+    <string name="always_on">همیشه فعال</string>
+    <string name="update_warning">فایل بروزرسانی فقط از مخزن رسمی دانلود می‌شود و امضای دیجیتال آن بررسی می‌گردد. نصب هرگز بدون اجازهٔ شما انجام نمی‌شود.</string>
+
+    <string name="notif_channel">وضعیت اتصال</string>
+    <string name="notif_connected">متصل · محافظت فعال</string>
+    <string name="notif_stop">قطع اتصال</string>
+    <string name="notif_blocked">تونل قطع شد · ترافیک مسدود است</string>
+
+    <string name="radar_title">کیفیت اتصال</string>
+    <string name="ping_label">تأخیر</string>
+    <string name="jitter_label">نوسان</string>
+    <string name="loss_label">اتلاف</string>
+    <string name="grade_excellent">عالی — مناسب تماس تصویری و بازی</string>
+    <string name="grade_good">خوب — تماس تصویری و پخش ویدیو روان است</string>
+    <string name="grade_fair">متوسط — برای گشت‌وگذار و ویدیوی HD مناسب است</string>
+    <string name="grade_poor">کند — گشت‌وگذار و موسیقی خوب است، تماس ممکن است قطع شود</string>
+    <string name="grade_bad">خیلی کند — تقریباً غیرقابل استفاده، دوباره وصل شوید</string>
+    <string name="grade_unknown">در حال اندازه‌گیری…</string>
+    <string name="next_check">بررسی بعدی تا %1$d ثانیه</string>
+
+    <string name="dpi_title">فیلترینگ شبکه</string>
+    <string name="dpi_open">باز — فیلترینگی دیده نشد</string>
+    <string name="dpi_filtered">فیلترشده — بعضی سایت‌ها با نام مسدودند</string>
+    <string name="dpi_aggressive">سخت‌گیرانه — بازرسی عمیق فعال است</string>
+    <string name="dpi_severe">شدید — بیشتر مسیرها مسدودند</string>
+    <string name="dpi_unknown">هنوز اندازه‌گیری نشده</string>
+
+    <string name="set_killswitch">قطع‌کنندهٔ اضطراری</string>
+    <string name="set_killswitch_sub">اگر تونل قطع شد، به‌جای بازگشت به شبکهٔ باز، همهٔ ترافیک مسدود شود</string>
+    <string name="set_fresh">هر بار مسیر تازه</string>
+    <string name="set_fresh_sub">پاک کردن مسیر ذخیره‌شده هنگام قطع، تا اتصال بعدی جای جدیدی برود</string>
+    <string name="set_clear_now">پاک کردن داده‌های ذخیره‌شده</string>
+    <string name="set_clear_sub">حذف مسیر ذخیره‌شده و شناسهٔ دستگاه</string>
+    <string name="cleared">پاک شد</string>
+
+    <string name="sni_mode">حالت نام جعلی</string>
+    <string name="sni_auto">خودکار</string>
+    <string name="sni_manual">دستی</string>
+    <string name="sni_auto_sub">شبکه را اسکن کن و نامی که می‌پذیرد انتخاب شود</string>
+    <string name="sni_scan_now">اسکن کن</string>
+    <string name="sni_scanning">در حال اسکن…</string>
+    <string name="sni_active">در حال استفاده: %1$s</string>
+
+    <string name="set_general">عمومی</string>
+    <string name="set_language">زبان</string>
+    <string name="lang_fa">فارسی</string>
+    <string name="lang_en">English</string>
+
+    <string name="set_device">سازگاری با گوشی</string>
+    <string name="quirk_title">گوشی شما به اجازه‌های بیشتری نیاز دارد</string>
+    <string name="quirk_body">این برند برنامه‌های پس‌زمینه را به‌شدت می‌بندد. بدون تنظیمات زیر، ممکن است هنگام خاموش بودن صفحه اتصال قطع شود.</string>
+    <string name="quirk_autostart">اجازهٔ اجرای خودکار</string>
+    <string name="quirk_autostart_sub">تا اتصال بعد از روشن شدن گوشی برقرار بماند</string>
+    <string name="quirk_battery">برداشتن محدودیت باتری</string>
+    <string name="quirk_battery_sub">جلوگیری از بسته شدن تونل توسط سیستم</string>
+    <string name="quirk_other">سایر مجوزها</string>
+    <string name="quirk_other_sub">نمایش پنجره در پس‌زمینه، برای پنجرهٔ تأیید لازم است</string>
+    <string name="quirk_alwayson">VPN همیشه‌روشن</string>
+    <string name="quirk_alwayson_sub">اختیاری، هنگام روشن شدن گوشی خودکار وصل می‌شود</string>
+    <string name="quirk_open">باز کردن</string>
+    <string name="quirk_done">انجام شد</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- never back up connection identity or logs -->
+    <exclude domain="file" path="core/" />
+    <exclude domain="sharedpref" path="onvo_secure.xml" />
+</full-backup-content>

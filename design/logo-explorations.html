@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Onvo — ترکیب با Ivora</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080D0C;--surf:#0E1614;--surf2:#141F1C;--on:#E6F0ED;--dim:#7E938E;
+  --outline:#233330;--teal:#2FE3C0;--teal-d:#12BFA0;--neutral:#4A5C58;--warn:#F5C86B}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#050807;font-family:Vazirmatn,system-ui,sans-serif;color:var(--on);
+  padding:32px 18px 80px;display:flex;flex-direction:column;align-items:center}
+h1{font-size:22px;font-weight:700;text-align:center}
+.sub{color:var(--dim);font-size:13px;text-align:center;max-width:740px;line-height:1.95;margin:9px 0 8px}
+h2.sec{font-size:15px;font-weight:600;color:var(--teal);margin:46px 0 4px;text-align:center;width:100%}
+.secsub{color:var(--dim);font-size:12.5px;text-align:center;margin-bottom:24px;line-height:1.9}
+
+/* concept cards */
+.cons{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;max-width:1250px}
+.cn{width:290px;background:var(--surf);border:1px solid var(--outline);border-radius:24px;
+  padding:20px;cursor:pointer;transition:all .25s;position:relative}
+.cn:hover{border-color:#2FE3C055;transform:translateY(-3px)}
+.cn.pick{border-color:var(--teal);background:#0F1D1A;box-shadow:0 0 0 1px #2FE3C040}
+.cn .stage{height:132px;display:grid;place-items:center;background:#070D0C;border-radius:18px;
+  margin-bottom:15px;border:1px solid #16211F}
+.cn .nm{font-size:14px;font-weight:600;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.cn .nm .no{width:20px;height:20px;border-radius:6px;background:#2FE3C018;color:var(--teal);
+  font-size:10.5px;display:grid;place-items:center;font-weight:700;flex:none}
+.cn .ds{font-size:12px;color:var(--dim);line-height:1.95}
+.cn .ds b{color:var(--on);font-weight:600}
+.cn .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:11px}
+.cn .tg{font-size:9.5px;padding:3px 8px;border-radius:7px;background:#2FE3C012;color:var(--teal);border:1px solid #2FE3C025}
+.cn .tg.w{background:#F5C86B12;color:var(--warn);border-color:#F5C86B25}
+
+/* icon set */
+.icons{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;max-width:1180px}
+.ic{display:flex;flex-direction:column;align-items:center;gap:10px}
+.tile{width:118px;height:118px;border-radius:29px;display:grid;place-items:center;position:relative;
+  overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.tile.dk{background:linear-gradient(158deg,#0E1B18,#060C0B)}
+.tile.gr{background:linear-gradient(150deg,#1AF0C9,#0E9E86)}
+.tile.mo{background:#080D0C;border:1px solid #1E2E2B}
+.ic .lb{font-size:11.5px;color:var(--dim);text-align:center;line-height:1.7}
+.ic .lb b{color:var(--on);display:block;font-size:12.5px;font-weight:600;margin-bottom:2px}
+.sizes{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center}
+.sizes .s{border-radius:26%;display:grid;place-items:center;background:linear-gradient(158deg,#0E1B18,#060C0B);overflow:hidden}
+
+/* wordmark */
+.wmrow{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;align-items:center}
+.wmbox{background:var(--surf);border:1px solid var(--outline);border-radius:20px;padding:26px 34px;
+  display:flex;align-items:center;gap:14px}
+.wmbox .wtx{font-size:30px;font-weight:700;letter-spacing:-.5px;direction:ltr}
+.wmbox .wtx .g{color:var(--teal)}
+.wmbox.lite{background:#EAF3F1;border-color:#CBDEDA}
+.wmbox.lite .wtx{color:#08201C}
+
+/* splash */
+.phone{width:284px;height:598px;background:var(--bg);border-radius:38px;border:1px solid #1C2926;
+  position:relative;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.65);display:grid;place-items:center}
+.phone::after{content:'';position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+  width:340px;height:340px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,#2FE3C014,transparent 62%)}
+.sp-in{display:flex;flex-direction:column;align-items:center;gap:22px;position:relative;z-index:2}
+.sp-word{font-size:26px;font-weight:700;letter-spacing:6px;direction:ltr}
+.sp-word .g{color:var(--teal)}
+.sp-tag{font-size:11px;color:var(--dim);letter-spacing:1.5px;margin-top:9px}
+.btnrow{display:flex;gap:9px;justify-content:center;margin-top:14px}
+.rb{padding:8px 17px;border-radius:11px;background:var(--surf2);border:1px solid var(--outline);
+  color:var(--on);font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.rb:hover{background:#2FE3C016;border-color:#2FE3C045;color:var(--teal)}
+
+/* draw anims */
+.dpath{stroke-dasharray:var(--len);stroke-dashoffset:var(--len)}
+.play .dpath{animation:draw 1.25s cubic-bezier(.5,.05,.3,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.dotpop{opacity:0}
+.play .dotpop{animation:dp .55s cubic-bezier(.3,1.7,.5,1) forwards}
+@keyframes dp{from{opacity:0;transform:scale(0) translateY(-9px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.fadein{opacity:0}
+.play .fadein{animation:fi .75s ease forwards}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* wave rise inside O */
+.wrise{opacity:0}
+.play .wrise{animation:wr .9s cubic-bezier(.3,.7,.4,1) forwards}
+@keyframes wr{from{opacity:0;transform:translateY(13px)}to{opacity:1;transform:translateY(0)}}
+
+.lg{max-width:1010px;margin-top:48px;background:#0B1110;border:1px solid #1B2926;border-radius:22px;padding:24px 28px}
+.lg h3{font-size:15px;margin-bottom:14px}
+.lg h4{font-size:12.5px;color:var(--teal);margin:17px 0 9px}.lg h4:first-of-type{margin-top:0}
+.lg ul{list-style:none;display:grid;gap:9px}
+.lg li{font-size:12.5px;color:#93A8A3;line-height:1.85;padding-inline-start:15px;position:relative}
+.lg li::before{content:'';position:absolute;right:0;top:8px;width:5px;height:5px;border-radius:50%;background:var(--teal);opacity:.6}
+.lg li b{color:var(--on);font-weight:600}
+.lg code{font-family:'JetBrains Mono',monospace;font-size:11px;background:#152220;padding:1px 6px;
+  border-radius:5px;color:var(--teal);direction:ltr;display:inline-block}
+</style>
+</head>
+<body>
+
+<h1>Onvo — با زبان بصری Ivora</h1>
+<p class="sub">اسم <b>Onvo</b> · حرف O به‌عنوان ظرف · موج و نقطهٔ Ivora داخلش<br>
+سه ترکیب مختلف — روی هرکدام کلیک کن تا آیکون‌ها و اسپلش عوض شوند</p>
+
+<h2 class="sec">۱ — سه ترکیب</h2>
+<p class="secsub">همه یک ایده دارند: <b>O = دکمهٔ گرد اپ</b>، و آنچه داخلش می‌افتد از Ivora می‌آید</p>
+
+<div class="cons">
+
+<div class="cn pick" onclick="pick(this,'A')">
+  <div class="stage"><svg width="86" height="86" viewBox="0 0 48 48" fill="none" stroke="#2FE3C0" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 8.5C32.5 8.5 39.5 15.5 39.5 24C39.5 32.5 32.5 39.5 24 39.5C15.5 39.5 8.5 32.5 8.5 24C8.5 15.5 15.5 8.5 24 8.5"/>
+    <path d="M15.5 27.5C18 24 20.5 31 24 27.5C27.5 24 30 31 32.5 27.5" stroke-width="2.4"/>
+    <circle cx="24" cy="16" r="2.6" fill="#2FE3C0" stroke="none"/></svg></div>
+  <div class="nm"><span class="no">۱</span>موج و نقطه</div>
+  <div class="ds">حلقهٔ O، موج داخلش، و <b>نقطهٔ Ivora</b> بالای موج شناور است — مثل حبابی که از مایع بالا آمده. مستقیم‌ترین ترکیب دو ایده.</div>
+  <div class="tags"><span class="tg">وفادار به هر دو</span><span class="tg">خوانا در ۲۴dp</span></div>
+</div>
+
+<div class="cn" onclick="pick(this,'B')">
+  <div class="stage"><svg width="86" height="86" viewBox="0 0 48 48" fill="none" stroke="#2FE3C0" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 8.5C32.5 8.5 39.5 15.5 39.5 24C39.5 32.5 32.5 39.5 24 39.5C15.5 39.5 8.5 32.5 8.5 24C8.5 15.5 15.5 8.5 24 8.5"/>
+    <path d="M24 14.5V22" stroke-width="2.6"/>
+    <path d="M15.5 29C18 25.5 20.5 32.5 24 29C27.5 25.5 30 32.5 32.5 29" stroke-width="2.4"/></svg></div>
+  <div class="nm"><span class="no">۲</span>خط عمودی پاور</div>
+  <div class="ds">همان <b>خط عمودی Ivora</b> — که تصادفاً دقیقاً نماد جهانی پاور است. O حلقهٔ دکمه، خط وسط، و موج زیرش. سه‌لایه در یک فرم.</div>
+  <div class="tags"><span class="tg">= آیکون پاور اپ</span><span class="tg">قوی‌ترین معنا</span></div>
+</div>
+
+<div class="cn" onclick="pick(this,'C')">
+  <div class="stage"><svg width="86" height="86" viewBox="0 0 48 48" fill="none" stroke="#2FE3C0" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M24 8.5C32.5 8.5 39.5 15.5 39.5 24C39.5 32.5 32.5 39.5 24 39.5C15.5 39.5 8.5 32.5 8.5 24C8.5 15.5 15.5 8.5 24 8.5"/>
+    <path d="M12 26.5C15.5 22.5 18.5 30 24 26.5C29.5 23 32.5 30.5 36 26.5" stroke-width="2.5"/>
+    <path d="M12 26.5V29C12 35 17.5 39.5 24 39.5C30.5 39.5 36 35 36 29V26.5" stroke-width="0" fill="#2FE3C0" opacity=".16"/>
+    <circle cx="24" cy="15" r="2.4" fill="#2FE3C0" stroke="none"/></svg></div>
+  <div class="nm"><span class="no">۳</span>O نیمه‌پر</div>
+  <div class="ds">موج تا نیمهٔ O بالا آمده و <b>زیرش پر شده</b> — همان دکمهٔ مایع اپ، فشرده در آیکون. لوگو خودش وضعیت اتصال را روایت می‌کند.</div>
+  <div class="tags"><span class="tg">= دکمهٔ مایع</span><span class="tg w">در ۲۴dp پرشدگی محو می‌شود</span></div>
+</div>
+
+</div>
+
+<h2 class="sec">۲ — آیکون در سه حالت</h2>
+<p class="secsub">ترکیب فعلی: <b id="curLbl">۱ — موج و نقطه</b></p>
+<div class="icons" id="iconGrid"></div>
+
+<h2 class="sec">۳ — اندازه‌های واقعی</h2>
+<p class="secsub">آزمون خوانایی از لانچر تا نوتیفیکیشن</p>
+<div class="sizes" id="sizeRow"></div>
+
+<h2 class="sec">۴ — لوگوتایپ</h2>
+<p class="secsub">آیکون کنار اسم، در تم تیره و روشن</p>
+<div class="wmrow">
+  <div class="wmbox"><span id="wmA"></span><span class="wtx"><span class="g">O</span>nvo</span></div>
+  <div class="wmbox lite"><span id="wmB"></span><span class="wtx"><span class="g" style="color:#0E9E86">O</span>nvo</span></div>
+</div>
+
+<h2 class="sec">۵ — اسپلش اسکرین</h2>
+<p class="secsub">حلقه رسم می‌شود ← موج از پایین بالا می‌آید ← نقطه می‌پرد ← اسم ظاهر می‌شود</p>
+
+<div style="display:flex;flex-direction:column;align-items:center">
+  <div class="phone"><div class="sp-in" id="spWrap">
+    <svg id="spSvg" width="112" height="112" viewBox="0 0 48 48" fill="none" stroke="#2FE3C0"
+         stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"></svg>
+    <div class="fadein" id="spTxt" style="text-align:center;animation-delay:1.5s">
+      <div class="sp-word"><span class="g">O</span>NVO</div>
+      <div class="sp-tag">اتصال امن</div>
+    </div>
+  </div></div>
+  <div class="btnrow"><button class="rb" onclick="playSplash()">▶ پخش دوباره</button></div>
+</div>
+
+<div class="lg"><h3>یادداشت‌ها</h3>
+<h4>چرا این ترکیب کار می‌کند</h4><ul>
+<li><b>O سه‌بار معنا دارد</b> — حرف اول اسم، حلقهٔ دکمهٔ اتصال، و ظرفی که مایع در آن بالا می‌آید. سه لایه در یک فرم، بدون شلوغی.</li>
+<li><b>موج از خود اسم می‌آید</b> — <code>Onvo</code> از <code>onda</code> یعنی موج. پس موج داخل آیکون تزئین نیست، ترجمهٔ تصویری اسم است.</li>
+<li><b>نقطهٔ Ivora حبابِ بالای مایع شد</b> — همان عنصری که در Ivora فقط نقطهٔ حرف I بود، اینجا معنا پیدا کرد.</li>
+<li><b>ترکیب ۲ قوی‌ترین است</b> از نظر معنایی: خط عمودی داخل حلقه دقیقاً نماد جهانی روشن/خاموش است. کاربر بدون توضیح می‌فهمد این اپ یک کلید است.</li>
+</ul>
+<h4>نکتهٔ فنی</h4><ul>
+<li>هر سه ترکیب <code>VectorDrawable</code> می‌شوند، زیر ۲ کیلوبایت هرکدام.</li>
+<li><b>Adaptive Icon</b> با لایهٔ جدا: حلقه و محتوا در پیش‌زمینه، گرادیان تیره در پس‌زمینه.</li>
+<li>نسخهٔ نوتیفیکیشن تک‌رنگ سفید است چون اندروید رنگ را اجباراً حذف می‌کند — در ترکیب ۳ به همین دلیل پرشدگی حذف و فقط خط موج می‌ماند.</li>
+<li>اسپلش با <code>SplashScreen</code> API اندروید ۱۲+، کل انیمیشن ۲.۲ ثانیه با هم‌پوشانی مراحل؛ اگر اپ زودتر آماده شود زودتر بسته می‌شود.</li>
+</ul>
+</div>
+
+<script>
+const C={
+ A:{paths:[
+   {d:'M24 8.5C32.5 8.5 39.5 15.5 39.5 24C39.5 32.5 32.5 39.5 24 39.5C15.5 39.5 8.5 32.5 8.5 24C8.5 15.5 15.5 8.5 24 8.5',w:1},
+   {d:'M15.5 27.5C18 24 20.5 31 24 27.5C27.5 24 30 31 32.5 27.5',w:.83,wave:1}],
+  dot:[24,16,2.6],lbl:'۱ — موج و نقطه'},
+ B:{paths:[
+   {d:'M24 8.5C32.5 8.5 39.5 15.5 39.5 24C39.5 32.5 32.5 39.5 24 39.5C15.5 39.5 8.5 32.5 8.5 24C8.5 15.5 15.5 8.5 24 8.5',w:1},
+   {d:'M24 14.5V22',w:.9},
+   {d:'M15.5 29C18 25.5 20.5 32.5 24 29C27.5 25.5 30 32.5 32.5 29',w:.83,wave:1}],
+  lbl:'۲ — خط عمودی پاور'},
+ C:{paths:[
+   {d:'M24 8.5C32.5 8.5 39.5 15.5 39.5 24C39.5 32.5 32.5 39.5 24 39.5C15.5 39.5 8.5 32.5 8.5 24C8.5 15.5 15.5 8.5 24 8.5',w:1},
+   {d:'M12 26.5C15.5 22.5 18.5 30 24 26.5C29.5 23 32.5 30.5 36 26.5',w:.86,wave:1}],
+  dot:[24,15,2.4],fill:1,lbl:'۳ — O نیمه‌پر'}
+};
+let cur='A';
+
+function svgFor(k,size,color,sw,opts={}){
+  const c=C[k];let s=`<svg width="${size}" height="${size}" viewBox="0 0 48 48" fill="none"
+    stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">`;
+  if(c.fill&&!opts.mono)
+    s+=`<path d="M12 26.5C15.5 22.5 18.5 30 24 26.5C29.5 23 32.5 30.5 36 26.5V29C36 35 30.5 39.5 24 39.5C17.5 39.5 12 35 12 29V26.5Z" fill="${color}" stroke="none" opacity=".17"/>`;
+  c.paths.forEach(p=>{s+=`<path d="${p.d}" stroke-width="${(sw*p.w).toFixed(2)}"/>`});
+  if(c.dot)s+=`<circle cx="${c.dot[0]}" cy="${c.dot[1]}" r="${c.dot[2]}" fill="${color}" stroke="none"/>`;
+  return s+'</svg>';
+}
+function render(){
+  document.getElementById('iconGrid').innerHTML=`
+  <div class="ic"><div class="tile dk">${svgFor(cur,62,'#2FE3C0',2.9)}</div>
+    <div class="lb"><b>آیکون اصلی</b>تیره · فیروزه‌ای</div></div>
+  <div class="ic"><div class="tile gr">${svgFor(cur,62,'#04322B',3)}</div>
+    <div class="lb"><b>تطبیقی روشن</b>پس‌زمینهٔ فیروزه‌ای</div></div>
+  <div class="ic"><div class="tile mo">${svgFor(cur,62,'#E6F0ED',2.6,{mono:1})}</div>
+    <div class="lb"><b>تک‌رنگ</b>نوتیفیکیشن · استاتوس‌بار</div></div>`;
+  document.getElementById('sizeRow').innerHTML=[[108,'۱۰۸dp'],[72,'۷۲dp'],[48,'۴۸dp'],[32,'۳۲dp'],[24,'۲۴dp']]
+    .map(([s,t])=>`<div class="ic"><div class="s" style="width:${s}px;height:${s}px">
+    ${svgFor(cur,Math.round(s*.58),'#2FE3C0',s<40?3.4:2.9,{mono:s<40})}</div>
+    <div class="lb" style="font-size:9.5px">${t}</div></div>`).join('');
+  document.getElementById('wmA').innerHTML=svgFor(cur,44,'#2FE3C0',2.9);
+  document.getElementById('wmB').innerHTML=svgFor(cur,44,'#0E9E86',2.9);
+  document.getElementById('curLbl').textContent=C[cur].lbl;
+}
+function pick(el,k){document.querySelectorAll('.cn').forEach(n=>n.classList.remove('pick'));
+  el.classList.add('pick');cur=k;render();playSplash()}
+
+function playSplash(){
+  const wrap=document.getElementById('spWrap'),svg=document.getElementById('spSvg'),c=C[cur];
+  let h='';
+  if(c.fill)h+=`<path class="wrise" style="animation-delay:1.05s" d="M12 26.5C15.5 22.5 18.5 30 24 26.5C29.5 23 32.5 30.5 36 26.5V29C36 35 30.5 39.5 24 39.5C17.5 39.5 12 35 12 29V26.5Z" fill="#2FE3C0" stroke="none" opacity=".17"/>`;
+  c.paths.forEach((p,i)=>{
+    if(p.wave)h+=`<path class="wrise" style="animation-delay:${1+i*0.1}s" d="${p.d}" stroke-width="${(2.7*p.w).toFixed(2)}"/>`;
+    else h+=`<path class="dpath" style="animation-delay:${i*0.5}s" d="${p.d}" stroke-width="${(2.7*p.w).toFixed(2)}"/>`});
+  if(c.dot)h+=`<circle class="dotpop" style="animation-delay:1.45s" cx="${c.dot[0]}" cy="${c.dot[1]}" r="${c.dot[2]}" fill="#2FE3C0" stroke="none"/>`;
+  svg.innerHTML=h;
+  svg.querySelectorAll('.dpath').forEach(p=>{const L=p.getTotalLength();p.style.setProperty('--len',L)});
+  wrap.classList.remove('play');void wrap.offsetWidth;wrap.classList.add('play');
+}
+render();playSplash();
+</script>
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>پروتوتایپ نسخهٔ ۳ — موج مایع</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080D0C; --surf:#0E1614; --surf2:#141F1C; --surf3:#1B2926;
+  --on:#E6F0ED; --dim:#7E938E; --outline:#233330;
+  --teal:#2FE3C0; --teal-d:#12BFA0;
+  --neutral:#4A5C58;
+  --warn:#F5C86B; --err:#FF8A80;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#050807;font-family:Vazirmatn,system-ui,sans-serif;color:var(--on);
+  padding:30px 16px 70px;display:flex;flex-direction:column;align-items:center}
+h1.t{font-size:21px;font-weight:700;text-align:center}
+p.s{color:var(--dim);font-size:13px;text-align:center;max-width:720px;line-height:1.95;margin:8px 0 26px}
+.rail{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start;max-width:1560px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:11px}
+.cap{font-size:12.5px;color:var(--dim)}.cap b{color:var(--teal)}
+
+.phone{width:328px;height:706px;background:var(--bg);border-radius:40px;
+  border:1px solid #1C2926;position:relative;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 26px 70px rgba(0,0,0,.7)}
+.phone::before{content:'';position:absolute;top:-70px;left:50%;transform:translateX(-50%);
+  width:420px;height:420px;border-radius:50%;pointer-events:none;opacity:0;transition:opacity 1s;
+  background:radial-gradient(circle,#2FE3C016 0%,transparent 62%)}
+.phone.on::before,.phone.conning::before{opacity:1}
+
+.sb{height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;
+  font-size:11px;color:var(--dim);flex:none;z-index:2}
+.sb .r{display:flex;gap:6px}
+.bar{height:56px;display:flex;align-items:center;gap:4px;padding:0 10px;flex:none;z-index:2}
+.ib{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;cursor:pointer;
+  border:0;background:transparent;color:var(--on);transition:background .18s}
+.ib:hover{background:#ffffff10}
+.bar .nm{font-size:16px;font-weight:600}.sp{flex:1}
+.pill{display:flex;align-items:center;gap:6px;padding:7px 13px;border-radius:20px;
+  background:var(--surf2);font-size:11.5px;color:var(--dim);border:1px solid var(--outline)}
+.pill .d{width:6px;height:6px;border-radius:50%;background:var(--dim)}
+.pill.live{color:var(--teal);border-color:#2FE3C040;background:#2FE3C012}
+.pill.live .d{background:var(--teal);box-shadow:0 0 7px var(--teal);animation:bl 2s infinite}
+@keyframes bl{50%{opacity:.35}}
+.body{flex:1;overflow-y:auto;z-index:2}.body::-webkit-scrollbar{width:0}
+
+/* ===== hero ===== */
+.hero{display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.timer{font-size:33px;font-weight:700;letter-spacing:1.5px;font-variant-numeric:tabular-nums;
+  font-family:'JetBrains Mono',monospace;direction:ltr;color:var(--dim);transition:color .8s}
+.on .timer{color:var(--teal)}
+.tlbl{font-size:12.5px;color:var(--dim);margin-top:4px}
+
+.orb{position:relative;width:250px;height:250px;display:grid;place-items:center;margin:6px 0 2px}
+.orb svg.rings{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.orb svg.rings path{fill:none;stroke:var(--neutral);stroke-width:1;opacity:.1;
+  transform-origin:125px 125px;transition:stroke 1s}
+.on .orb svg.rings path,.conning .orb svg.rings path{stroke:var(--teal)}
+.on .orb svg.rings path{animation:breathe 7s ease-in-out infinite}
+.conning .orb svg.rings path{animation:breathe 3.2s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:.05;transform:scale(.9) rotate(0)}50%{opacity:.4;transform:scale(1.04) rotate(6deg)}}
+
+/* ---- liquid button ---- */
+.pwr{width:126px;height:126px;border-radius:50%;border:0;cursor:pointer;position:relative;z-index:3;
+  overflow:hidden;background:var(--surf3);box-shadow:inset 0 0 0 1px #ffffff0d;
+  transition:box-shadow .8s;display:grid;place-items:center;padding:0}
+.pwr:active{transform:scale(.96)}
+.on .pwr{box-shadow:0 0 66px -8px #2FE3C0aa,inset 0 0 0 1px #ffffff26}
+
+/* the liquid layer */
+.liq{position:absolute;left:0;right:0;bottom:0;height:0%;transition:height .5s linear;
+  background:linear-gradient(180deg,var(--teal) 0%,var(--teal-d) 100%);z-index:1}
+.liq::before,.liq::after{content:'';position:absolute;left:-50%;width:200%;height:26px;top:-24px;
+  background-repeat:repeat-x;background-size:50% 100%;
+  background-image:radial-gradient(ellipse 50% 100% at 50% 100%,var(--teal) 49.6%,transparent 50%)}
+.liq::before{animation:wv 2.6s linear infinite;opacity:.95}
+.liq::after{animation:wv 3.9s linear infinite reverse;opacity:.55;top:-19px}
+@keyframes wv{from{transform:translateX(0)}to{transform:translateX(50%)}}
+
+/* static power icon — never rotates */
+.pwr svg.i{width:46px;height:46px;position:relative;z-index:2;
+  color:var(--neutral);transition:color .7s;overflow:visible}
+.conning .pwr svg.i{color:#8FA6A1}
+.on .pwr svg.i{color:#032420}
+
+.pct{position:absolute;bottom:13px;left:0;right:0;text-align:center;font-size:10px;z-index:2;
+  font-family:'JetBrains Mono',monospace;color:#0000;transition:color .4s;font-weight:500}
+.conning .pct{color:#DFF7F1}
+.hint{font-size:12.5px;color:var(--dim);margin-top:8px;height:17px}
+
+/* ===== chips ===== */
+.chips{display:flex;gap:7px;justify-content:center;margin-top:14px;padding:0 18px}
+.chip{padding:8px 17px;border-radius:22px;background:transparent;font-size:12.5px;cursor:pointer;
+  border:1px solid var(--outline);color:var(--dim);font-family:inherit;font-weight:500;transition:all .2s}
+.chip:hover{background:#ffffff08}
+.chip.sel{background:var(--teal);border-color:transparent;color:#042A25;font-weight:600}
+
+/* ===== doodles ===== */
+.doodle{display:block;margin:0 auto}
+.doodle *{vector-effect:non-scaling-stroke}
+.dstroke{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin="round"}
+.empty{padding:22px 30px 4px;text-align:center;color:var(--neutral)}
+.empty .cap2{font-size:12.5px;color:var(--dim);line-height:1.9;margin-top:12px}
+
+/* float animation for doodle */
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.float{animation:fl 4.5s ease-in-out infinite}
+@keyframes fl2{0%,100%{transform:translateY(0) rotate(0)}50%{transform:translateY(-4px) rotate(3deg)}}
+.float2{animation:fl2 5.5s ease-in-out infinite}
+
+/* ===== stats ===== */
+.srow{display:flex;gap:9px;margin:14px 18px 0}
+.st{flex:1;background:var(--surf);border-radius:20px;padding:12px 13px;border:1px solid #ffffff08;
+  display:flex;align-items:center;gap:9px}
+.st .ic{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;flex:none}
+.st.dn .ic{background:#2FE3C01c;color:var(--teal)}
+.st.up .ic{background:#F5C86B1c;color:var(--warn)}
+.st .v{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.st .v small{font-size:9.5px;font-weight:400;color:var(--dim);margin-inline-start:2px}
+.st .k{font-size:10px;color:var(--dim);margin-top:1px}
+.scard{margin:9px 18px 0;background:var(--surf);border-radius:20px;padding:13px 15px;
+  display:flex;align-items:center;gap:11px;border:1px solid #ffffff08;cursor:pointer}
+.scard .fl{font-size:20px}
+.scard .nm2{flex:1;font-size:13.5px;font-weight:500}
+.scard .nm2 small{display:block;font-size:10.5px;color:var(--dim);margin-top:2px;font-weight:400}
+.sig{display:flex;gap:2px;align-items:flex-end;height:14px}
+.sig i{width:3px;background:var(--teal);border-radius:1px;display:block}
+.sig i:nth-child(1){height:5px}.sig i:nth-child(2){height:9px}.sig i:nth-child(3){height:14px}
+.vf{margin:9px 18px 20px;background:#2FE3C00e;border:1px solid #2FE3C02e;border-radius:20px;padding:14px 15px}
+.vf .h{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--teal)}
+.vf .g{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;margin-top:11px;font-size:11.5px;color:var(--dim)}
+.vf .g div{display:flex;align-items:center;gap:6px}
+.vf .g em{color:var(--teal);font-style:normal;font-size:10px}
+.steps{margin:16px 18px 0;background:var(--surf);border-radius:22px;overflow:hidden;border:1px solid #ffffff08}
+.sr{display:flex;align-items:center;gap:11px;padding:12px 16px;font-size:13px}
+.sr+.sr{border-top:1px solid #ffffff08}
+.mk{width:18px;height:18px;flex:none;display:grid;place-items:center}
+.mk.w{border:1.5px solid var(--outline);border-radius:50%}
+.mk.r{border:1.5px solid var(--teal);border-top-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.mk.d{color:var(--teal)}
+.sr.p{color:var(--dim);opacity:.4}.sr .tt{flex:1}
+.sr .ms{font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+.coll{margin:14px 18px 0;background:var(--surf);border-radius:18px;padding:13px 16px;display:flex;
+  align-items:center;gap:10px;font-size:13px;cursor:pointer;border:1px solid #ffffff08}
+.coll .o{color:var(--teal);display:grid;place-items:center}
+
+/* drawer */
+.scr{position:absolute;inset:0;background:#000c;z-index:9;opacity:0;pointer-events:none;transition:opacity .3s}
+.scr.s{opacity:1;pointer-events:auto}
+.dw{position:absolute;top:0;right:0;bottom:0;width:278px;background:var(--surf);z-index:10;
+  transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.8,.2,1);display:flex;flex-direction:column;overflow:hidden}
+.dw.s{transform:translateX(0)}
+.dh{padding:22px 18px 16px;background:linear-gradient(155deg,#123A33,#0B231F);position:relative;overflow:hidden}
+.dh svg.wm{position:absolute;left:-14px;top:-8px;opacity:.13;color:var(--teal)}
+.dh .n{font-size:15.5px;font-weight:600;display:flex;align-items:center;gap:8px;position:relative}
+.dh .n i{width:7px;height:7px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:bl 2s infinite}
+.dh .rw{display:flex;justify-content:space-between;font-size:11.5px;color:#9FC4BC;margin-top:10px;position:relative}
+.dh .rw b{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;color:#CFE9E3}
+.dl{flex:1;padding:10px;overflow-y:auto}.dl::-webkit-scrollbar{width:0}
+.di{display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:15px;font-size:13.5px;cursor:pointer;transition:background .18s}
+.di:hover{background:#ffffff0a}
+.di.a{background:#2FE3C016;color:var(--teal);font-weight:500}
+.di .ic{width:19px;display:grid;place-items:center;flex:none;opacity:.9}
+.di .bg{margin-inline-start:auto;font-size:10px;background:var(--teal);color:#042A25;padding:2px 7px;border-radius:9px;font-weight:700}
+.dsep{height:1px;background:var(--outline);margin:8px 14px}
+.dlb{font-size:10.5px;color:var(--dim);padding:10px 14px 6px;font-weight:600}
+
+/* console */
+.shd{margin:14px 16px 0;background:var(--surf);border-radius:20px;padding:15px 16px;border:1px solid #ffffff08}
+.shd .b{display:flex;align-items:center;gap:12px}
+.shd .e{width:40px;height:40px;border-radius:50%;background:#2FE3C01c;display:grid;place-items:center;flex:none}
+.shd .x1{font-size:14.5px;font-weight:600;color:var(--teal)}
+.shd .x2{font-size:11.5px;color:var(--dim);margin-top:3px;line-height:1.7}
+.tr{display:flex;align-items:center;gap:10px;margin:11px 16px 0;padding:12px 15px;background:var(--surf);
+  border-radius:17px;font-size:13px;border:1px solid #ffffff08}
+.tr .l{flex:1}.tr .l small{display:block;font-size:11px;color:var(--dim);margin-top:2px}
+.sw{width:44px;height:25px;border-radius:13px;background:var(--surf3);position:relative;cursor:pointer;
+  transition:background .25s;flex:none;border:1px solid var(--outline)}
+.sw i{position:absolute;top:3px;right:3px;width:17px;height:17px;border-radius:50%;background:var(--dim);transition:all .25s}
+.sw.on{background:var(--teal);border-color:transparent}
+.sw.on i{right:22px;background:#042A25;width:19px;height:19px;top:2px}
+.pln{margin:11px 16px}
+.pl{display:flex;gap:11px;padding:12px 14px;background:var(--surf);border-radius:17px;margin-bottom:8px;
+  border:1px solid #ffffff08;align-items:flex-start}
+.pl .i{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:none;font-size:13px}
+.pl.g .i{background:#2FE3C01c;color:var(--teal)}.pl.w .i{background:#F5C86B1c;color:var(--warn)}
+.pl .c{flex:1}.pl .c b{font-size:13px;display:block;margin-bottom:3px}
+.pl .c p{font-size:11.5px;color:var(--dim);line-height:1.8}
+.pl .tm{font-size:10px;color:var(--dim);opacity:.6;font-family:'JetBrains Mono',monospace}
+.term{margin:11px 16px;background:#060A09;border-radius:17px;border:1px solid var(--outline);overflow:hidden;
+  font-family:'JetBrains Mono',monospace;direction:ltr}
+.tb{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#0C1413;border-bottom:1px solid var(--outline);font-size:10.5px;color:var(--dim)}
+.tb .cp{margin-left:auto;display:flex;gap:5px;align-items:center;cursor:pointer;padding:4px 9px;border-radius:7px;border:1px solid var(--outline);transition:all .18s}
+.tb .cp:hover{background:#ffffff10;color:var(--on)}
+.tb .cp.d{color:var(--teal);border-color:#2FE3C050}
+.tls{padding:10px 12px;font-size:10.5px;line-height:1.95;max-height:205px;overflow-y:auto}
+.tls::-webkit-scrollbar{width:3px}.tls::-webkit-scrollbar-thumb{background:var(--outline);border-radius:3px}
+.tl{display:flex;gap:8px}
+.tl .ts{color:#3F544F;flex:none}.tl .lv{flex:none;width:35px}
+.tl .lv.I{color:#6FB6D8}.tl .lv.O{color:var(--teal)}.tl .lv.W{color:var(--warn)}.tl .lv.D{color:#5E7570}
+.tl .tx{color:#A9BCB7;white-space:pre-wrap}
+.pr{display:flex;align-items:center;gap:7px;padding:9px 12px;border-top:1px solid var(--outline);background:#0C1413;font-size:11px}
+.pr .ps{color:var(--teal)}
+.pr input{flex:1;background:transparent;border:0;outline:0;color:var(--on);font-family:inherit;font-size:11px}
+.pr .cu{width:7px;height:13px;background:var(--teal);animation:bl 1.1s step-end infinite}
+.cm{margin:0 16px 20px;display:flex;gap:6px;flex-wrap:wrap}
+.cc{padding:6px 11px;background:var(--surf2);border:1px solid var(--outline);border-radius:10px;
+  font-size:10.5px;font-family:'JetBrains Mono',monospace;color:var(--dim);cursor:pointer;direction:ltr}
+.cc:hover{background:#2FE3C016;color:var(--teal);border-color:#2FE3C040}
+
+.lg{max-width:1030px;margin-top:40px;background:#0B1110;border:1px solid #1B2926;border-radius:22px;padding:24px 28px}
+.lg h3{font-size:15px;margin-bottom:15px}
+.lg h4{font-size:12.5px;color:var(--teal);margin:16px 0 9px}
+.lg h4:first-of-type{margin-top:0}
+.lg ul{list-style:none;display:grid;gap:9px}
+.lg li{font-size:12.5px;color:#93A8A3;line-height:1.85;padding-inline-start:15px;position:relative}
+.lg li::before{content:'';position:absolute;right:0;top:8px;width:5px;height:5px;border-radius:50%;background:var(--teal);opacity:.65}
+.lg li b{color:var(--on);font-weight:600}
+.lg code{font-family:'JetBrains Mono',monospace;font-size:11px;background:#152220;padding:1px 6px;
+  border-radius:5px;color:var(--teal);direction:ltr;display:inline-block}
+</style>
+</head>
+<body>
+
+<h1 class="t">نسخهٔ ۳ — آیکون ثابت، پر شدن موجی</h1>
+<p class="s">آیکون پاور دیگر نمی‌چرخد · مایع فیروزه‌ای از پایین بالا می‌آید تا ۱۰۰٪ · رنگ از خاکستری خنثی به فیروزه‌ای می‌رود</p>
+
+<div class="rail">
+
+<!-- 1 IDLE -->
+<div class="slot"><div class="phone" id="p1">
+  <div class="sb"><span>۱۲:۴۸</span><div class="r"><span>▮▮▮</span><span>۸۷٪</span></div></div>
+  <div class="bar">
+    <button class="ib" onclick="dr(1,1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h13M3 18h18"/></svg></button>
+    <div class="sp"></div><div class="pill" id="pl1"><span class="d"></span>قطع</div><div style="width:6px"></div></div>
+  <div class="body">
+    <div class="hero">
+      <div class="timer" id="tm1">00:00:00</div>
+      <div class="tlbl" id="lb1">آمادهٔ اتصال</div>
+      <div class="orb">
+        <svg class="rings" viewBox="0 0 250 250">
+          <path d="M125,36 C171,36 214,79 214,125 C214,171 171,214 125,214 C79,214 36,171 36,125 C36,79 79,36 125,36" style="animation-delay:0s"/>
+          <path d="M125,26 C181,30 220,69 224,125 C220,181 181,220 125,224 C69,220 30,181 26,125 C30,69 69,30 125,26" style="animation-delay:.5s"/>
+          <path d="M125,16 C189,18 232,61 234,125 C232,189 189,232 125,234 C61,232 18,189 16,125 C18,61 61,18 125,16" style="animation-delay:1s"/>
+          <path d="M125,6 C197,10 240,53 244,125 C240,197 197,240 125,244 C53,240 10,197 6,125 C10,53 53,10 125,6" style="animation-delay:1.5s"/>
+          <path d="M125,48 C163,48 202,87 202,125 C202,163 163,202 125,202 C87,202 48,163 48,125 C48,87 87,48 125,48" style="animation-delay:2s"/>
+        </svg>
+        <button class="pwr" onclick="go()">
+          <div class="liq" id="lq1"></div>
+          <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+          <div class="pct" id="pc1"></div>
+        </button>
+      </div>
+      <div class="hint" id="hn1">برای اتصال لمس کنید</div>
+    </div>
+    <div class="chips">
+      <button class="chip sel" onclick="ch(this)">خودکار</button>
+      <button class="chip" onclick="ch(this)">سریع</button>
+      <button class="chip" onclick="ch(this)">امن</button>
+    </div>
+    <div id="ar1">
+      <!-- abstract: unprotected -->
+      <div class="empty">
+        <svg class="doodle" width="150" height="60" viewBox="0 0 150 60" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+          <path d="M8 30h30" opacity=".5"/>
+          <path d="M46 30h8M62 30h8M78 30h8M94 30h8" opacity=".28"/>
+          <path d="M112 30h30" opacity=".5"/>
+          <circle cx="8" cy="30" r="3" fill="currentColor" stroke="none" opacity=".55"/>
+          <circle cx="142" cy="30" r="3" fill="currentColor" stroke="none" opacity=".55"/>
+          <path d="M75 20v20" opacity=".35"/>
+        </svg>
+        <div class="cap2">هنوز محافظت نشده‌اید<br><span style="opacity:.65;font-size:11.5px">دکمه را لمس کنید تا اتصال امن برقرار شود</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="scr" id="sc1" onclick="dr(1,0)"></div>
+  <div class="dw" id="dw1">
+    <div class="dh">
+      <svg class="wm" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div class="n"><i></i>متصل · حالت خودکار</div>
+      <div class="rw"><span>پروتکل</span><b>MASQUE / H3</b></div>
+      <div class="rw"><span>آی‌پی</span><b>104.28.•••.•••</b></div>
+      <div class="rw"><span>موقعیت</span><b>Frankfurt · DE</b></div></div>
+    <div class="dl">
+      <div class="di a"><span class="ic">⌂</span>خانه</div>
+      <div class="di"><span class="ic">◈</span>گزارش سلامت اتصال</div>
+      <div class="di"><span class="ic">◎</span>سرورها و پروفایل‌ها</div>
+      <div class="di"><span class="ic">▢</span>انتخاب برنامه‌ها</div>
+      <div class="dsep"></div><div class="dlb">پیشرفته</div>
+      <div class="di"><span class="ic">⚙</span>تنظیمات پیشرفته</div>
+      <div class="di"><span class="ic">▸</span>کنسول و لاگ</div>
+      <div class="di"><span class="ic">↓</span>بروزرسانی<span class="bg">۱</span></div>
+      <div class="dsep"></div><div class="di"><span class="ic">ⓘ</span>درباره برنامه</div>
+    </div>
+  </div>
+</div><div class="cap"><b>۱.</b> دکمه را بزن — موج را ببین</div></div>
+
+<!-- 2 CONNECTING (static snapshot at 62%) -->
+<div class="slot"><div class="phone conning">
+  <div class="sb"><span>۱۲:۴۸</span><div class="r"><span>▮▮▮</span><span>۸۷٪</span></div></div>
+  <div class="bar"><button class="ib"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h13M3 18h18"/></svg></button>
+    <div class="sp"></div><div class="pill"><span class="d"></span>در حال اتصال</div><div style="width:6px"></div></div>
+  <div class="body"><div class="hero">
+    <div class="timer">00:00:04</div><div class="tlbl">در حال برقراری…</div>
+    <div class="orb"><svg class="rings" viewBox="0 0 250 250">
+      <path d="M125,36 C171,36 214,79 214,125 C214,171 171,214 125,214 C79,214 36,171 36,125 C36,79 79,36 125,36" style="animation-delay:0s"/>
+      <path d="M125,26 C181,30 220,69 224,125 C220,181 181,220 125,224 C69,220 30,181 26,125 C30,69 69,30 125,26" style="animation-delay:.4s"/>
+      <path d="M125,16 C189,18 232,61 234,125 C232,189 189,232 125,234 C61,232 18,189 16,125 C18,61 61,18 125,16" style="animation-delay:.8s"/>
+      <path d="M125,6 C197,10 240,53 244,125 C240,197 197,240 125,244 C53,240 10,197 6,125 C10,53 53,10 125,6" style="animation-delay:1.2s"/>
+      <path d="M125,48 C163,48 202,87 202,125 C202,163 163,202 125,202 C87,202 48,163 48,125 C48,87 87,48 125,48" style="animation-delay:1.6s"/>
+    </svg>
+    <button class="pwr">
+      <div class="liq" style="height:62%"></div>
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+      <div class="pct">۶۲٪</div>
+    </button></div>
+    <div class="hint">برقراری تونل امن…</div></div>
+    <div class="chips"><button class="chip sel">خودکار</button><button class="chip">سریع</button><button class="chip">امن</button></div>
+    <div class="steps">
+      <div class="sr"><span class="mk d"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span class="tt">بررسی شبکه</span><span class="ms">210ms</span></div>
+      <div class="sr"><span class="mk d"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span class="tt">پیدا کردن بهترین مسیر</span><span class="ms">1.8s</span></div>
+      <div class="sr"><span class="mk r"></span><span class="tt">برقراری تونل امن</span></div>
+      <div class="sr p"><span class="mk w"></span><span class="tt">آزمایش واقعی اتصال</span></div>
+      <div class="sr p"><span class="mk w"></span><span class="tt">بررسی نشتی اطلاعات</span></div>
+    </div>
+  </div>
+</div><div class="cap"><b>۲.</b> ۶۲٪ پر شده</div></div>
+
+<!-- 3 CONNECTED -->
+<div class="slot"><div class="phone on">
+  <div class="sb"><span>۱۳:۰۲</span><div class="r"><span>🔑</span><span>▮▮▮</span><span>۸۶٪</span></div></div>
+  <div class="bar"><button class="ib" onclick="dr(3,1)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h13M3 18h18"/></svg></button>
+    <div class="sp"></div><div class="pill live"><span class="d"></span>محافظت فعال</div><div style="width:6px"></div></div>
+  <div class="body"><div class="hero">
+    <div class="timer">01:06:29</div><div class="tlbl">زمان اتصال</div>
+    <div class="orb"><svg class="rings" viewBox="0 0 250 250">
+      <path d="M125,36 C171,36 214,79 214,125 C214,171 171,214 125,214 C79,214 36,171 36,125 C36,79 79,36 125,36" style="animation-delay:0s"/>
+      <path d="M125,26 C181,30 220,69 224,125 C220,181 181,220 125,224 C69,220 30,181 26,125 C30,69 69,30 125,26" style="animation-delay:.5s"/>
+      <path d="M125,16 C189,18 232,61 234,125 C232,189 189,232 125,234 C61,232 18,189 16,125 C18,61 61,18 125,16" style="animation-delay:1s"/>
+      <path d="M125,6 C197,10 240,53 244,125 C240,197 197,240 125,244 C53,240 10,197 6,125 C10,53 53,10 125,6" style="animation-delay:1.5s"/>
+      <path d="M125,48 C163,48 202,87 202,125 C202,163 163,202 125,202 C87,202 48,163 48,125 C48,87 87,48 125,48" style="animation-delay:2s"/>
+    </svg>
+    <button class="pwr">
+      <div class="liq" style="height:100%"></div>
+      <svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v9"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>
+    </button></div>
+    <div class="hint">برای قطع لمس کنید</div></div>
+    <div class="chips"><button class="chip sel">خودکار</button><button class="chip">سریع</button><button class="chip">امن</button></div>
+    <div class="srow">
+      <div class="st dn"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span><div><div class="v">۲۸.۴<small>MB/s</small></div><div class="k">دریافت</div></div></div>
+      <div class="st up"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><div><div class="v">۹.۱<small>MB/s</small></div><div class="k">ارسال</div></div></div></div>
+    <div class="scard"><span class="fl">🇩🇪</span><div class="nm2">Frankfurt · آلمان<small>MASQUE / HTTP3 · تأخیر ۴۲ms</small></div><div class="sig"><i></i><i></i><i></i></div></div>
+    <div class="coll"><span class="o"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span style="flex:1">هر ۵ آزمایش با موفقیت انجام شد</span><span style="color:var(--dim);font-size:11px">▾</span></div>
+    <div class="vf"><div class="h"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>اتصال شما واقعاً برقرار است</div>
+      <div class="g"><div><em>✓</em>آی‌پی عوض شده</div><div><em>✓</em>بدون نشتی DNS</div><div><em>✓</em>بدون نشتی IPv6</div>
+      <div><em>✓</em>دانلود آزمایش شد</div><div><em>✓</em>عبور UDP سالم</div><div><em>✓</em>سرعت پایدار</div></div></div>
+  </div>
+  <div class="scr" id="sc3" onclick="dr(3,0)"></div>
+  <div class="dw" id="dw3">
+    <div class="dh"><svg class="wm" width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div class="n"><i></i>متصل · حالت خودکار</div>
+      <div class="rw"><span>پروتکل</span><b>MASQUE / H3</b></div>
+      <div class="rw"><span>آی‌پی</span><b>104.28.•••.•••</b></div>
+      <div class="rw"><span>موقعیت</span><b>Frankfurt · DE</b></div></div>
+    <div class="dl">
+      <div class="di"><span class="ic">⌂</span>خانه</div>
+      <div class="di"><span class="ic">◈</span>گزارش سلامت اتصال</div>
+      <div class="di"><span class="ic">◎</span>سرورها و پروفایل‌ها</div>
+      <div class="di"><span class="ic">▢</span>انتخاب برنامه‌ها</div>
+      <div class="dsep"></div><div class="dlb">پیشرفته</div>
+      <div class="di"><span class="ic">⚙</span>تنظیمات پیشرفته</div>
+      <div class="di a"><span class="ic">▸</span>کنسول و لاگ</div>
+      <div class="di"><span class="ic">↓</span>بروزرسانی<span class="bg">۱</span></div>
+      <div class="dsep"></div><div class="di"><span class="ic">ⓘ</span>درباره برنامه</div>
+    </div>
+  </div>
+</div><div class="cap"><b>۳.</b> ۱۰۰٪ — منو را باز کن</div></div>
+
+<!-- 4 CONSOLE with doodle -->
+<div class="slot"><div class="phone">
+  <div class="sb"><span>۱۳:۰۴</span><div class="r"><span>🔑</span><span>▮▮▮</span><span>۸۶٪</span></div></div>
+  <div class="bar"><button class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="nm">کنسول و لاگ</span><div class="sp"></div></div>
+  <div class="body">
+    <div class="shd"><div class="b"><span class="e"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2FE3C0" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+      <div><div class="x1">همه‌چیز درست کار می‌کند</div><div class="x2">در ۶۶ دقیقهٔ گذشته مشکلی پیش نیامده</div></div></div>
+      <!-- abstract sparkline -->
+      <svg class="doodle" style="margin-top:14px;color:var(--teal);opacity:.55" width="230" height="34" viewBox="0 0 230 34" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 24 L18 20 L34 22 L50 12 L66 16 L82 9 L98 13 L114 7 L130 11 L146 6 L162 10 L178 5 L194 8 L210 4 L228 6"/>
+        <circle cx="228" cy="6" r="2.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div class="tr"><div class="l">نمایش جزئیات فنی<small>برای کاربران حرفه‌ای</small></div>
+      <div class="sw on" onclick="this.classList.toggle('on');tc(this)"><i></i></div></div>
+    <div class="pln" id="pn4">
+      <div class="pl g"><span class="i">✓</span><div class="c"><b>اتصال برقرار شد</b><p>از طریق سرور آلمان، با روش امن</p></div><span class="tm">۱۱:۵۸</span></div>
+      <div class="pl w"><span class="i">!</span><div class="c"><b>یک‌بار قطع شد و خودکار وصل شد</b><p>شبکه لحظه‌ای ضعیف شد. کاری لازم نیست</p></div><span class="tm">۱۲:۴۱</span></div>
+      <div class="pl g"><span class="i">✓</span><div class="c"><b>آزمایش سلامت انجام شد</b><p>هر ۵ مورد سالم بود</p></div><span class="tm">۱۳:۰۲</span></div>
+    </div>
+    <div class="term" id="tm4">
+      <div class="tb"><span>LOG</span><span style="opacity:.4">·</span><span>aether-core</span>
+        <span class="cp" onclick="cp(this)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><span>کپی همه</span></span></div>
+      <div class="tls">
+        <div class="tl"><span class="ts">11:58:02</span><span class="lv I">INFO</span><span class="tx">scan=balanced proto=masque</span></div>
+        <div class="tl"><span class="ts">11:58:03</span><span class="lv D">DBG</span><span class="tx">probe 162.159.192.1 rtt=48ms</span></div>
+        <div class="tl"><span class="ts">11:58:04</span><span class="lv I">INFO</span><span class="tx">endpoint ok · h3 · fp=chrome</span></div>
+        <div class="tl"><span class="ts">11:58:05</span><span class="lv O">OK</span><span class="tx">data-plane validated 312KB</span></div>
+        <div class="tl"><span class="ts">11:58:05</span><span class="lv O">OK</span><span class="tx">socks5 127.0.0.1:1819</span></div>
+        <div class="tl"><span class="ts">11:58:06</span><span class="lv I">INFO</span><span class="tx">tun up mtu=1420 uidfilter=on</span></div>
+        <div class="tl"><span class="ts">12:41:18</span><span class="lv W">WARN</span><span class="tx">path degraded, reconnect…</span></div>
+        <div class="tl"><span class="ts">12:41:20</span><span class="lv O">OK</span><span class="tx">quick-reconnect ok 1.9s</span></div>
+        <div class="tl"><span class="ts">13:02:44</span><span class="lv O">OK</span><span class="tx">verify ip✓ dns✓ v6✓ thr✓ udp✓</span></div>
+      </div>
+      <div class="pr"><span class="ps">$</span><input placeholder="دستور…" dir="ltr"><span class="cu"></span></div>
+    </div>
+    <div class="cm" id="cm4"><span class="cc">ping</span><span class="cc">dns</span><span class="cc">trace</span>
+      <span class="cc">leak-test</span><span class="cc">bench</span><span class="cc">stats</span>
+      <span class="cc">config show</span><span class="cc">export</span></div>
+  </div>
+</div><div class="cap"><b>۴.</b> کنسول</div></div>
+
+<!-- 5 EMPTY / ERROR states with doodles -->
+<div class="slot"><div class="phone">
+  <div class="sb"><span>۱۳:۰۶</span><div class="r"><span>▮▮▮</span><span>۸۵٪</span></div></div>
+  <div class="bar"><button class="ib"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+    <span class="nm">حالت‌های خالی</span></div>
+  <div class="body">
+    <!-- searching -->
+    <div style="text-align:center;padding:26px 26px 8px;color:var(--teal)">
+      <svg class="doodle" width="150" height="56" viewBox="0 0 150 56" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <circle cx="75" cy="28" r="6" opacity=".9"/>
+        <circle cx="75" cy="28" r="16" opacity=".45"/>
+        <circle cx="75" cy="28" r="26" opacity=".22"/>
+        <path d="M75 2v6M75 48v6M49 28h-6M107 28h6" opacity=".4"/>
+      </svg>
+      <div style="font-size:13px;color:var(--on);margin-top:12px;font-weight:500">در حال جستجوی بهترین مسیر</div>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.8">چند ثانیه طول می‌کشد</div>
+    </div>
+    <!-- failed -->
+    <div style="text-align:center;padding:30px 26px 8px;color:var(--warn)">
+      <svg class="doodle" width="150" height="52" viewBox="0 0 150 52" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <path d="M10 26h44" opacity=".55"/><path d="M96 26h44" opacity=".55"/>
+        <path d="M64 16l10 10-10 10" opacity=".85"/><path d="M86 16L76 26l10 10" opacity=".85"/>
+        <circle cx="10" cy="26" r="3" fill="currentColor" stroke="none" opacity=".6"/>
+        <circle cx="140" cy="26" r="3" fill="currentColor" stroke="none" opacity=".6"/>
+      </svg>
+      <div style="font-size:13px;color:var(--on);margin-top:12px;font-weight:500">این مسیر جواب نداد</div>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.8">خودکار مسیر بعدی را امتحان می‌کنیم…</div>
+    </div>
+    <!-- no servers -->
+    <div style="text-align:center;padding:30px 26px 26px;color:var(--neutral)">
+      <svg class="doodle" width="150" height="58" viewBox="0 0 150 58" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <rect x="45" y="8" width="60" height="15" rx="4" opacity=".7"/>
+        <rect x="45" y="31" width="60" height="15" rx="4" opacity=".4" stroke-dasharray="4 4"/>
+        <circle cx="55" cy="15.5" r="2" fill="currentColor" stroke="none" opacity=".7"/>
+        <path d="M75 50v6M69 56h12" opacity=".3"/>
+      </svg>
+      <div style="font-size:13px;color:var(--on);margin-top:12px;font-weight:500">هنوز پروفایلی اضافه نکرده‌اید</div>
+      <div style="font-size:11.5px;color:var(--dim);margin-top:5px;line-height:1.8">حالت خودکار بدون پروفایل هم کار می‌کند</div>
+    </div>
+  </div>
+</div><div class="cap"><b>۵.</b> حالت‌های خالی</div></div>
+
+</div>
+
+<div class="lg"><h3>تغییرات این نسخه</h3>
+<h4>دکمهٔ مایع</h4><ul>
+<li><b>آیکون پاور کاملاً ثابت شد</b> — هیچ چرخشی ندارد، نه در حالت عادی نه حین اتصال. فقط رنگش آرام عوض می‌شود.</li>
+<li><b>پر شدن موجی از پایین</b> — دو موج با سرعت و جهت متفاوت روی هم سوار می‌شوند تا حرکت طبیعی مایع ساخته شود، نه یک نوار پیشرفتِ خشک.</li>
+<li><b>درصد واقعی</b> — ارتفاع مایع به پیشرفت واقعی پنج مرحله گره خورده، پس عدد الکی نیست. زیر آیکون هم درصد نوشته می‌شود.</li>
+<li><b>رنگ خنثی → فیروزه‌ای</b> — خاکستری‌سبز مرده در حالت قطع، فیروزهٔ روشن در ۱۰۰٪. حلقه‌های دور هم همین مسیر رنگ را طی می‌کنند.</li>
+<li><b>وقتی قطع می‌کنی</b> مایع دوباره پایین می‌رود، برعکس همان مسیر.</li>
+</ul>
+<h4>حالت‌های خالی — بدون آدمک</h4><ul>
+<li><b>آدمک‌ها حذف شدند.</b> جای‌شان المان‌های انتزاعی نشست: مسیر بریده با دو نقطهٔ انتهایی (قطع)، حلقه‌های رادار هم‌مرکز (جستجو)، دو فلش رویاروی هم (خطا)، کارت خط‌چین خالی (بدون پروفایل)، خط نمودار (سلامت).</li>
+<li><b>هم‌زبان با بقیهٔ رابط</b> — همان ضخامت خط ۱.۶، همان انتهای گرد، همان زبان هندسی حلقه‌های دور دکمه.</li>
+<li><b>هم‌رنگ وضعیت</b> — خنثی، فیروزه‌ای یا کهربایی، بسته به حال‌وروز اتصال.</li>
+</ul>
+<h4>دربارهٔ حجم — یک تصحیح مهم</h4><ul>
+<li><b>R8 فقط کد را کوچک می‌کند</b>، نه تصاویر را. حق با توست که باید فعال باشد و حتماً فعال می‌شود (<code>minifyEnabled true</code> + <code>shrinkResources true</code>)، ولی اثرش روی گرافیک تقریباً صفر است.</li>
+<li><b>راه‌حل واقعی همین است که انجام دادم</b> — همهٔ دودل‌ها <code>VectorDrawable</code> خواهند بود، نه PNG. هر کدام حدود ۱ تا ۲ کیلوبایت. کل مجموعه زیر ۲۰ کیلوبایت، و در هر رزولوشنی تیز می‌مانند.</li>
+<li>اگر تصویرسازی رنگی و پیچیده می‌خواستیم، مجبور بودیم PNG چندرزولوشنی بگذاریم که چند مگابایت می‌شد — دقیقاً همان چیزی که در Privity برنداشتم.</li>
+<li>حجم نهایی APK عملاً توسط باینری‌های native تعیین می‌شود (Aether حدود ۸ مگ، ByeDPI زیر ۲۰۰ کیلوبایت). با <code>ABI splits</code> هر کاربر فقط معماری خودش را دانلود می‌کند.</li>
+</ul>
+</div>
+
+<script>
+function dr(n,s){document.getElementById('dw'+n).classList.toggle('s',!!s);document.getElementById('sc'+n).classList.toggle('s',!!s)}
+function ch(e){e.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('sel'));e.classList.add('sel')}
+function cp(e){navigator.clipboard&&navigator.clipboard.writeText([...document.querySelectorAll('#tm4 .tl')].map(l=>l.innerText.replace(/\n/g,' ')).join('\n'));
+  e.classList.add('d');e.querySelector('span').textContent='کپی شد ✓';
+  setTimeout(()=>{e.classList.remove('d');e.querySelector('span').textContent='کپی همه'},1600)}
+function tc(sw){const o=sw.classList.contains('on');
+  document.getElementById('tm4').style.display=o?'':'none';
+  document.getElementById('cm4').style.display=o?'':'none';
+  document.getElementById('pn4').style.display=o?'none':''}
+tc(document.querySelector('.tr .sw'));
+
+const fa=n=>String(n).replace(/\d/g,d=>'۰۱۲۳۴۵۶۷۸۹'[d]);
+const S=[['بررسی شبکه',900],['پیدا کردن بهترین مسیر',1600],['برقراری تونل امن',1500],['آزمایش واقعی اتصال',1300],['بررسی نشتی اطلاعات',1000]];
+let busy=0,tk=null,sec=0,pctTk=null;
+const two=n=>String(n|0).padStart(2,'0');
+
+const DOODLE_OFF=`<div class="empty">
+  <svg class="doodle" width="150" height="60" viewBox="0 0 150 60" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+  <path d="M8 30h30" opacity=".5"/><path d="M46 30h8M62 30h8M78 30h8M94 30h8" opacity=".28"/>
+  <path d="M112 30h30" opacity=".5"/>
+  <circle cx="8" cy="30" r="3" fill="currentColor" stroke="none" opacity=".55"/>
+  <circle cx="142" cy="30" r="3" fill="currentColor" stroke="none" opacity=".55"/>
+  <path d="M75 20v20" opacity=".35"/></svg>
+  <div class="cap2">هنوز محافظت نشده‌اید<br><span style="opacity:.65;font-size:11.5px">دکمه را لمس کنید تا اتصال امن برقرار شود</span></div></div>`;
+
+function go(){
+  if(busy)return;busy=1;
+  const p=document.getElementById('p1'),tm=document.getElementById('tm1'),lb=document.getElementById('lb1'),
+        hn=document.getElementById('hn1'),ar=document.getElementById('ar1'),pl=document.getElementById('pl1'),
+        lq=document.getElementById('lq1'),pc=document.getElementById('pc1');
+
+  /* ---- disconnect: drain the liquid ---- */
+  if(p.classList.contains('on')){
+    p.classList.remove('on');clearInterval(tk);clearInterval(pctTk);sec=0;
+    lq.style.transition='height 1.1s cubic-bezier(.4,0,.6,1)';lq.style.height='0%';
+    tm.textContent='00:00:00';lb.textContent='آمادهٔ اتصال';hn.textContent='برای اتصال لمس کنید';
+    pl.className='pill';pl.innerHTML='<span class="d"></span>قطع';pc.textContent='';
+    ar.innerHTML=DOODLE_OFF;busy=0;return}
+
+  /* ---- connect ---- */
+  p.classList.add('conning');lb.textContent='در حال برقراری…';
+  pl.className='pill';pl.innerHTML='<span class="d"></span>در حال اتصال';
+  lq.style.transition='height .6s cubic-bezier(.35,0,.5,1)';
+  ar.innerHTML='<div class="steps">'+S.map(x=>`<div class="sr p"><span class="mk w"></span><span class="tt">${x[0]}</span></div>`).join('')+'</div>';
+  const rs=ar.querySelectorAll('.sr');let i=0,shown=0;
+  clearInterval(pctTk);
+  pctTk=setInterval(()=>{const target=(i/S.length)*100;
+    shown+=(target-shown)*0.18;pc.textContent=fa(Math.round(shown))+'٪'},60);
+
+  (function nx(){
+    if(i>0){const m=rs[i-1].querySelector('.mk');m.className='mk d';
+      m.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'}
+    lq.style.height=(i/S.length*100)+'%';
+    if(i>=rs.length){
+      setTimeout(()=>{
+        clearInterval(pctTk);pc.textContent='';
+        p.classList.remove('conning');p.classList.add('on');
+        lb.textContent='زمان اتصال';hn.textContent='برای قطع لمس کنید';
+        pl.className='pill live';pl.innerHTML='<span class="d"></span>محافظت فعال';
+        sec=0;clearInterval(tk);tk=setInterval(()=>{sec++;
+          tm.textContent=two(sec/3600)+':'+two(sec/60%60)+':'+two(sec%60)},1000);
+        ar.innerHTML=`<div class="srow">
+          <div class="st dn"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg></span><div><div class="v">۲۸.۴<small>MB/s</small></div><div class="k">دریافت</div></div></div>
+          <div class="st up"><span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span><div><div class="v">۹.۱<small>MB/s</small></div><div class="k">ارسال</div></div></div></div>
+          <div class="scard"><span class="fl">🇩🇪</span><div class="nm2">Frankfurt · آلمان<small>MASQUE / HTTP3 · تأخیر ۴۲ms</small></div><div class="sig"><i></i><i></i><i></i></div></div>
+          <div class="coll"><span class="o"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span><span style="flex:1">هر ۵ آزمایش با موفقیت انجام شد</span><span style="color:var(--dim);font-size:11px">▾</span></div>
+          <div class="vf"><div class="h"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>اتصال شما واقعاً برقرار است</div>
+          <div class="g"><div><em>✓</em>آی‌پی عوض شده</div><div><em>✓</em>بدون نشتی DNS</div><div><em>✓</em>بدون نشتی IPv6</div>
+          <div><em>✓</em>دانلود آزمایش شد</div><div><em>✓</em>عبور UDP سالم</div><div><em>✓</em>سرعت پایدار</div></div></div>`;
+        busy=0;},620);
+      return}
+    rs[i].classList.remove('p');rs[i].querySelector('.mk').className='mk r';
+    hn.textContent=S[i][0]+'…';setTimeout(nx,S[i][1]);i++})();
+}
+</script>
+</body>
+</html>

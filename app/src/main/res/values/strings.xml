@@ -1,0 +1,146 @@
+<resources>
+    <string name="app_name">Onvo</string>
+    <string name="tagline">Secure connection</string>
+
+    <string name="state_off">Not connected</string>
+    <string name="state_connecting">Connecting…</string>
+    <string name="state_on">Connected</string>
+    <string name="hint_tap_connect">Tap to connect</string>
+    <string name="hint_tap_disconnect">Tap to disconnect</string>
+    <string name="ready">Ready to connect</string>
+    <string name="conn_time">Connection time</string>
+
+    <string name="mode_auto">Auto</string>
+    <string name="mode_fast">Fast</string>
+    <string name="mode_safe">Safe</string>
+
+    <string name="pill_off">Off</string>
+    <string name="pill_connecting">Connecting</string>
+    <string name="pill_on">Protected</string>
+
+    <string name="step_network">Checking network</string>
+    <string name="step_route">Finding best route</string>
+    <string name="step_tunnel">Establishing secure tunnel</string>
+    <string name="step_verify">Testing real connection</string>
+    <string name="step_leak">Checking for leaks</string>
+
+    <string name="all_tests_passed">All 5 tests passed</string>
+    <string name="really_connected">Your connection is genuinely active</string>
+    <string name="v_ip">IP changed</string>
+    <string name="v_dns">No DNS leak</string>
+    <string name="v_v6">No IPv6 leak</string>
+    <string name="v_thr">Download verified</string>
+    <string name="v_udp">UDP passes</string>
+    <string name="v_stable">Stable speed</string>
+
+    <string name="fail_title">Could not connect</string>
+    <string name="fail_all">Every route was tried and none carried real traffic. Your network may be blocking all of them right now.</string>
+    <string name="fail_native_title">This build is incomplete</string>
+    <string name="fail_native">The connection engine is missing for your phone\'s processor. This is a build problem, not a network problem — the APK was assembled without its native components.</string>
+    <string name="fail_retry">Try again</string>
+
+    <string name="not_protected">You are not protected yet</string>
+    <string name="not_protected_sub">Tap the button to establish a secure connection</string>
+
+    <string name="dl">Download</string>
+    <string name="ul">Upload</string>
+
+    <string name="menu_home">Home</string>
+    <string name="menu_health">Connection health</string>
+    <string name="menu_servers">Servers and profiles</string>
+    <string name="menu_apps">Choose apps</string>
+    <string name="menu_advanced">Advanced settings</string>
+    <string name="menu_console">Console and logs</string>
+    <string name="menu_update">Update</string>
+    <string name="menu_about">About</string>
+    <string name="grp_advanced">Advanced</string>
+
+    <string name="console_ok">Everything is working</string>
+    <string name="console_ok_sub">No problems in the last hour</string>
+    <string name="show_technical">Show technical details</string>
+    <string name="show_technical_sub">For advanced users</string>
+    <string name="copy_all">Copy all</string>
+    <string name="copied">Copied ✓</string>
+
+    <string name="set_ai">Artificial intelligence</string>
+    <string name="set_ai_local">Smart route selection</string>
+    <string name="set_ai_local_sub">Learns on this phone, sends nothing</string>
+    <string name="set_ai_cloud">Cloud assistance</string>
+    <string name="set_ai_cloud_sub">Send anonymous stats for better results</string>
+    <string name="set_ai_retry">Automatic retry</string>
+    <string name="set_ai_retry_sub">If a test fails, try the next route</string>
+
+    <string name="set_dpi">Censorship bypass</string>
+    <string name="set_sni">Fake site name</string>
+    <string name="set_sni_sub">No root needed</string>
+    <string name="set_frag">Split packets</string>
+    <string name="set_fakename">Fake name</string>
+    <string name="set_scan">Scan intensity</string>
+
+    <string name="set_update">Updates</string>
+    <string name="set_notify_only">Notify only</string>
+    <string name="set_notify_only_sub">Never installs automatically</string>
+    <string name="set_sig">Verify digital signature</string>
+    <string name="set_sig_sub">Cannot be turned off</string>
+    <string name="always_on">Always on</string>
+    <string name="update_warning">Update files are downloaded only from the official repository and their digital signature is verified. Installation never happens without your permission.</string>
+
+    <string name="notif_channel">Connection status</string>
+    <string name="notif_connected">Connected · protected</string>
+    <string name="notif_stop">Disconnect</string>
+    <string name="notif_blocked">Tunnel lost · traffic blocked</string>
+
+    <string name="radar_title">Connection quality</string>
+    <string name="ping_label">Latency</string>
+    <string name="jitter_label">Jitter</string>
+    <string name="loss_label">Loss</string>
+    <string name="grade_excellent">Excellent — good for video calls and gaming</string>
+    <string name="grade_good">Good — video calls and streaming work well</string>
+    <string name="grade_fair">Fair — fine for browsing and HD video</string>
+    <string name="grade_poor">Slow — browsing and music are okay, calls may stutter</string>
+    <string name="grade_bad">Very slow — barely usable, try reconnecting</string>
+    <string name="grade_unknown">Measuring…</string>
+    <string name="next_check">Next check in %1$ds</string>
+
+    <string name="dpi_title">Network filtering</string>
+    <string name="dpi_open">Open — no filtering detected</string>
+    <string name="dpi_filtered">Filtered — some sites blocked by name</string>
+    <string name="dpi_aggressive">Aggressive — deep inspection active</string>
+    <string name="dpi_severe">Severe — most routes are blocked</string>
+    <string name="dpi_unknown">Not measured yet</string>
+
+    <string name="set_killswitch">Kill switch</string>
+    <string name="set_killswitch_sub">If the tunnel drops, block all traffic instead of falling back to the open network</string>
+    <string name="set_fresh">Fresh route each time</string>
+    <string name="set_fresh_sub">Clear the cached endpoint on disconnect so the next connection lands somewhere new</string>
+    <string name="set_clear_now">Clear cached data now</string>
+    <string name="set_clear_sub">Removes the saved endpoint and device identity</string>
+    <string name="cleared">Cleared</string>
+
+    <string name="sni_mode">Decoy name mode</string>
+    <string name="sni_auto">Automatic</string>
+    <string name="sni_manual">Manual</string>
+    <string name="sni_auto_sub">Scan the network and pick a name it accepts</string>
+    <string name="sni_scan_now">Scan now</string>
+    <string name="sni_scanning">Scanning…</string>
+    <string name="sni_active">In use: %1$s</string>
+
+    <string name="set_general">General</string>
+    <string name="set_language">Language</string>
+    <string name="lang_fa">فارسی</string>
+    <string name="lang_en">English</string>
+
+    <string name="set_device">Device compatibility</string>
+    <string name="quirk_title">Your phone needs extra permissions</string>
+    <string name="quirk_body">This brand closes background apps aggressively. Without the settings below, the connection may drop when the screen is off.</string>
+    <string name="quirk_autostart">Allow autostart</string>
+    <string name="quirk_autostart_sub">So the connection survives a restart</string>
+    <string name="quirk_battery">Remove battery restriction</string>
+    <string name="quirk_battery_sub">Prevents the system from killing the tunnel</string>
+    <string name="quirk_other">Other permissions</string>
+    <string name="quirk_other_sub">Background pop-up, needed for the consent dialog</string>
+    <string name="quirk_alwayson">Always-on VPN</string>
+    <string name="quirk_alwayson_sub">Optional, connects automatically at boot</string>
+    <string name="quirk_open">Open</string>
+    <string name="quirk_done">Done</string>
+</resources>
