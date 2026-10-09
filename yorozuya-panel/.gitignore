@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+*.tmp
+.venv/
+venv/
+.env
+data/
+*.corrupt
+.DS_Store

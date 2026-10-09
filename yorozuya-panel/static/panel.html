@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍓 یوروزویا پنل</title>
+<link rel="icon" href="/static/logo.svg">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar wood">
+    <img class="logo" src="/static/logo.svg" alt="logo">
+    <div>
+      <h1>یوروزویا پنل <span class="kanji">万事屋</span></h1>
+      <div class="sub">مغازه همه‌کاره گینتاما — نسخه سبک و باحال 😎🍓</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="clock" id="clock">--:--</div>
+    <button class="btn small danger" onclick="logout()">🚪 خروج</button>
+  </div>
+
+  <div class="warn-bar" id="pw-warn" style="display:none">⚠️ رمز پیش‌فرض فعاله! حتماً متغیر <span class="mono">ADMIN_PASSWORD</span> رو در Render عوض کن.</div>
+
+  <div class="fun"><span class="face">🍓</span><span id="fun-line">در حال آماده‌سازی شیر توت‌فرنگی…</span></div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="dash" onclick="showTab('dash')">📊 داشبورد</button>
+    <button class="tab" data-tab="users" onclick="showTab('users')">👥 کاربران</button>
+    <button class="tab" data-tab="nodes" onclick="showTab('nodes')">🛰 نودها</button>
+    <button class="tab" data-tab="tools" onclick="showTab('tools')">🛠 ابزار</button>
+    <button class="tab" data-tab="settings" onclick="showTab('settings')">⚙️ تنظیمات</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="tabpane active" id="pane-dash">
+    <div class="grid c2">
+      <div class="card" style="text-align:center">
+        <h3>🌍 آی‌پی خروجی کانفیگ‌ها</h3>
+        <div class="flag-big" id="out-flag">🏳️</div>
+        <div class="out-ip" id="out-ip">…</div>
+        <div style="margin:8px 0">
+          <span class="badge gold" id="out-country">…</span>
+          <span class="badge info" id="out-city" style="display:none"></span>
+        </div>
+        <div class="muted" style="font-size:.82rem" id="out-isp"></div>
+        <div style="margin-top:12px"><button class="btn small blue" onclick="refreshOutbound(this)">🔄 رفرش آی‌پی</button></div>
+      </div>
+      <div class="grid c2">
+        <div class="card stat"><div class="ico">👥</div><div class="num" id="c-users">–</div><div class="cap">کل کاربران</div></div>
+        <div class="card stat"><div class="ico">✅</div><div class="num" id="c-active">–</div><div class="cap">کاربران فعال</div></div>
+        <div class="card stat"><div class="ico">🛰</div><div class="num" id="c-nodes">–</div><div class="cap">نودها</div></div>
+        <div class="card stat"><div class="ico">💚</div><div class="num" id="c-online">–</div><div class="cap">نودهای آنلاین</div></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>📜 تابلوی مغازه</h3>
+      <div id="dash-nodes"><span class="muted">در حال بارگذاری…</span></div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="tabpane" id="pane-users">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn" onclick="openUserModal()">➕ کاربر جدید</button>
+        <div class="spacer"></div>
+        <input class="search" id="user-search" placeholder="🔍 جستجو…" oninput="renderUsers()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>کاربر</th><th>وضعیت</th><th>ترافیک</th><th>انقضا</th><th>عملیات</th></tr></thead>
+          <tbody id="users-body"><tr><td colspan="5" class="muted">در حال بارگذاری…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- NODES -->
+  <div class="tabpane" id="pane-nodes">
+    <div class="toolbar">
+      <button class="btn" onclick="openNodeModal()">➕ نود جدید</button>
+      <button class="btn blue" onclick="checkAllNodes(this)">📡 چک همه نودها</button>
+    </div>
+    <div class="grid c2" id="nodes-grid"><div class="card muted">در حال بارگذاری…</div></div>
+  </div>
+
+  <!-- TOOLS -->
+  <div class="tabpane" id="pane-tools">
+    <div class="card" style="max-width:640px">
+      <h3>🔎 آی‌پی / هاست مال کدوم کشوره؟</h3>
+      <div class="muted" style="font-size:.85rem;margin-bottom:12px">یه آی‌پی یا دامنه بده تا بگم کجای دنیاست 🌍</div>
+      <div style="display:flex;gap:8px">
+        <input id="lookup-q" placeholder="مثال: 8.8.8.8 یا google.com" style="direction:ltr;text-align:left" onkeydown="if(event.key==='Enter')doLookup()">
+        <button class="btn blue" onclick="doLookup()" style="flex:none">🔍 بگرد</button>
+      </div>
+      <div id="lookup-res" style="margin-top:14px"></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="tabpane" id="pane-settings">
+    <div class="grid c2">
+      <div class="card">
+        <h3>🔗 دامنه عمومی ساب</h3>
+        <div class="muted" style="font-size:.85rem;margin-bottom:10px">اگه خالی باشه، خودکار از آدرس همین صفحه ساخته می‌شه. برای Render معمولاً نیازی به تغییر نیست.</div>
+        <input id="set-base" placeholder="https://yorozuya-panel.onrender.com" style="direction:ltr;text-align:left">
+        <div style="margin-top:12px"><button class="btn green" onclick="saveSettings()">💾 ذخیره</button></div>
+      </div>
+      <div class="card">
+        <h3>💾 بکاپ / ریستور</h3>
+        <div class="muted" style="font-size:.85rem;margin-bottom:12px">کل یوزرها و نودها یه فایل JSON می‌شن. (پلن رایگان Render دیسک نداره؛ بکاپ بگیر!)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn blue" onclick="downloadBackup()">⬇️ دانلود بکاپ</button>
+          <label class="btn gold" style="cursor:pointer">⬆️ ریستور<input type="file" id="restore-file" accept=".json" style="display:none" onchange="doRestore(this)"></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot">🍓 ساخته شده با شیر توت‌فرنگی و تنبلی گینتاما <span class="kanji">万事屋</span> · <span id="ver"></span></footer>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal card" id="modal-box" style="margin:auto 0">
+    <div class="mhead"><h3 id="modal-title"></h3><button class="x" onclick="closeModal()">✕</button></div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

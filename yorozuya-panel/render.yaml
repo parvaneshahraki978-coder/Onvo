@@ -1,0 +1,21 @@
+# 🍓 YorozuyaPanel on Render
+# Deploy: New → Web Service → select this repo → Render reads this file.
+services:
+  - type: web
+    name: yorozuya-panel
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    # NOTE: `free` instances have an ephemeral filesystem (data resets on redeploy).
+    # For persistent users/nodes, upgrade to `starter` and add a disk:
+    # disk:
+    #   name: yorozuya-data
+    #   mountPath: /data
+    #   sizeGB: 1
+    envVars:
+      # - key: DATA_DIR
+      #   value: /data          # uncomment together with the disk above
+      - key: ADMIN_PASSWORD
+        generateValue: true     # Render shows it once → save it! (change anytime in Dashboard)
+      - key: SECRET_KEY
+        generateValue: true
