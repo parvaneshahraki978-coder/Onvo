@@ -1,21 +1,23 @@
-# 🍓 YorozuyaPanel on Render
-# Deploy: New → Web Service → select this repo → Render reads this file.
+# 🍓 YorozuyaPanel — Python Edition on Render
+# Deploy: New → Blueprint → select this repo → Render reads this file.
 services:
   - type: web
-    name: yorozuya-panel
-    runtime: docker
+    name: yorozuya-panel-python
+    runtime: python
     plan: free
+    rootDir: yorozuya-panel
+    buildCommand: ""            # stdlib only — nothing to install
+    startCommand: python app.py
     healthCheckPath: /healthz
-    # NOTE: `free` instances have an ephemeral filesystem (data resets on redeploy).
-    # For persistent users/nodes, upgrade to `starter` and add a disk:
-    # disk:
-    #   name: yorozuya-data
-    #   mountPath: /data
-    #   sizeGB: 1
     envVars:
-      # - key: DATA_DIR
-      #   value: /data          # uncomment together with the disk above
-      - key: ADMIN_PASSWORD
-        generateValue: true     # Render shows it once → save it! (change anytime in Dashboard)
-      - key: SECRET_KEY
-        generateValue: true
+      - key: KEEPALIVE_MINUTES
+        value: "10"            # self-ping cron — the free instance never sleeps
+      # - key: ADMIN_PASSWORD   # optional override; otherwise set the password in /setup on first run
+      # - key: PUBLIC_URL       # optional; Render's RENDER_EXTERNAL_URL is auto-detected
+      # NOTE: free instances have an ephemeral filesystem (data resets on redeploy).
+      # For persistent users/nodes, upgrade to `starter` and add a disk:
+      # disk:
+      #   name: yorozuya-data
+      #   mountPath: /data
+      #   sizeGB: 1
+      # …and set DATA_DIR=/data in envVars.

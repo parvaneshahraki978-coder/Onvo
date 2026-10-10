@@ -7,3 +7,4 @@ venv/
 data/
 *.corrupt
 .DS_Store
+yorozuya-data/
