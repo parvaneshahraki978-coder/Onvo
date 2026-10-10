@@ -7,15 +7,23 @@
  *  Just 2 files to deploy: index.js + package.json
  *
  *    npm install
- *    ADMIN_PASSWORD=something-strong node index.js
- *    → http://localhost:8080/login
+ *    node index.js
+ *    → open the printed "Web Panel path" and set your admin password
+ *      on first run (no env vars needed). ADMIN_PASSWORD env still
+ *      works as an override.
+ *
+ *  Built to run on the WEAKEST servers: 2 deps, 1 process, no DB,
+ *  debounced JSON writes, on-demand QR, tiny intervals.
+ *
+ *  Extras: real load balancer across nodes (round-robin / least-latency
+ *  / random) + keep-alive cron (self-ping) so free hosts never sleep.
  *
  *  Architecture inspired by Blue-Knight-Panel-V3 (single-file Express
  *  bundle + embedded frontend + JSON persistence). All code here is
  *  original. Fan-made Gintama theme, not affiliated with publishers.
  * ====================================================================
  */
-const Y_VERSION = '1.0.0';
+const Y_VERSION = '1.1.0';
 
 const express = require('express');
 const QRCode = require('qrcode');
@@ -31,10 +39,14 @@ const Y_CONFIG = {
   brand: 'YorozuyaPanel',
   kanji: '万事屋',
   port: parseInt(process.env.PORT || process.env.SERVER_PORT || '8080', 10) || 8080,
-  adminPassword: process.env.ADMIN_PASSWORD || 'yorozuya',
+  adminPassword: process.env.ADMIN_PASSWORD || '', // optional override; first-run setup otherwise
+  publicUrl: String(process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || process.env.DOMAIN || '').replace(/\/+$/, ''),
+  keepaliveMinutes: parseFloat(process.env.KEEPALIVE_MINUTES !== undefined ? process.env.KEEPALIVE_MINUTES : '10') || 0,
+  nodeCheckMinutes: parseFloat(process.env.NODE_CHECK_MINUTES !== undefined ? process.env.NODE_CHECK_MINUTES : '5') || 0,
   dataDirHint: process.env.DATA_DIR || '',
 };
-const DEFAULT_PASSWORD = Y_CONFIG.adminPassword === 'yorozuya';
+const ENV_PASSWORD_SET = !!process.env.ADMIN_PASSWORD;
+const DEFAULT_PASSWORD = ENV_PASSWORD_SET && Y_CONFIG.adminPassword === 'yorozuya';
 const SESSION_TTL = 12 * 3600 * 1000; // 12h
 const IP_API_FIELDS = 'status,message,country,countryCode,city,query,org,isp';
 const IP_CACHE_TTL = 7 * 24 * 3600 * 1000;
@@ -75,23 +87,36 @@ const DATA_DIR = pickDataDir();
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
 
 // ============ STATE ============
-const STATE = { users: [], nodes: [], settings: { sub_base_url: '' }, ip_cache: {} };
+const STATE = {
+  users: [], nodes: [],
+  settings: { sub_base_url: '', admin_hash: '' },
+  lb: { strategy: 'round-robin', rr: 0, picks: {} },
+  ip_cache: {},
+};
 let dirty = false;
+let saveTimer = null;
 function loadState() {
   try {
     if (!fs.existsSync(STATE_FILE)) return;
     const d = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
     if (Array.isArray(d.users)) STATE.users = d.users;
     if (Array.isArray(d.nodes)) STATE.nodes = d.nodes;
-    if (d.settings && typeof d.settings === 'object') STATE.settings = Object.assign({ sub_base_url: '' }, d.settings);
+    if (d.settings && typeof d.settings === 'object') STATE.settings = Object.assign({ sub_base_url: '', admin_hash: '' }, d.settings);
+    if (d.lb && typeof d.lb === 'object') STATE.lb = Object.assign({ strategy: 'round-robin', rr: 0, picks: {} }, d.lb);
     if (d.ip_cache && typeof d.ip_cache === 'object') STATE.ip_cache = d.ip_cache;
-    console.log('🍓 loaded state: ' + STATE.users.length + ' users, ' + STATE.nodes.length + ' nodes');
+    console.log('🍓 state: ' + STATE.users.length + ' users, ' + STATE.nodes.length + ' nodes');
   } catch (e) {
     try { fs.renameSync(STATE_FILE, STATE_FILE + '.corrupt'); } catch (e2) {}
     console.log('⚠️ corrupt state file, starting fresh: ' + e.message);
   }
 }
-function markDirty() { dirty = true; }
+// debounced write — weak servers shouldn't fsync on every tiny change
+function markDirty() {
+  dirty = true;
+  if (saveTimer) return;
+  saveTimer = setTimeout(function () { saveTimer = null; saveState(false); }, 1000);
+  if (saveTimer.unref) saveTimer.unref();
+}
 function saveState(force) {
   if (!dirty && !force) return;
   dirty = false;
@@ -150,6 +175,12 @@ function passOk(a, b) {
   if (ab.length !== bb.length) return false;
   return crypto.timingSafeEqual(ab, bb);
 }
+function sha256(s) { return crypto.createHash('sha256').update(String(s)).digest('hex'); }
+function activeHash() {
+  if (ENV_PASSWORD_SET) return sha256(Y_CONFIG.adminPassword);
+  return String(STATE.settings.admin_hash || '');
+}
+function passwordSet() { return !!activeHash(); }
 
 // ============ SESSIONS ============
 const SESSIONS = new Map(); // token -> exp ts
@@ -172,6 +203,7 @@ function checkSession(req) {
   return true;
 }
 function requireAuth(req, res, next) {
+  if (!passwordSet()) return res.status(503).json({ detail: 'setup required — open /setup' });
   if (!checkSession(req)) return res.status(401).json({ detail: 'login required' });
   next();
 }
@@ -352,20 +384,68 @@ function buildLink(userUuid, remark, n) {
   }
   return '';
 }
-function userLinks(user) {
+function linkEntry(user, n) {
+  const cc = n.country_code || '';
+  const remark = '🍓 ' + user.username + '｜' + n.name + (cc ? '｜' + cc : '');
+  const link = buildLink(user.uuid, remark, n);
+  if (!link) return null;
+  return { node: n.name, node_id: n.id, protocol: n.protocol || 'vless', country: n.country || '', country_code: cc, flag: cc ? flag(cc) : '', link: link };
+}
+function userLinks(user, mode) {
   const out = [];
+  if (mode === 'lb') {
+    const p = pickNode();
+    if (p) { const e = linkEntry(user, p); if (e) out.push(e); }
+    return out;
+  }
   STATE.nodes.forEach(function (n) {
     if (n.enabled === false) return;
-    const cc = n.country_code || '';
-    const remark = '🍓 ' + user.username + '｜' + n.name + (cc ? '｜' + cc : '');
-    const link = buildLink(user.uuid, remark, n);
-    if (link) out.push({ node: n.name, protocol: n.protocol || 'vless', country: n.country || '', country_code: cc, flag: cc ? flag(cc) : '', link: link });
+    if (mode && n.id !== mode) return;
+    const e = linkEntry(user, n);
+    if (e) out.push(e);
   });
   return out;
+}
+
+// ============ LOAD BALANCER (real balancing across healthy nodes) ============
+const LB_STRATEGIES = ['round-robin', 'least-latency', 'random'];
+function lbState() {
+  if (!STATE.lb || typeof STATE.lb !== 'object') STATE.lb = { strategy: 'round-robin', rr: 0, picks: {} };
+  if (!STATE.lb.picks || typeof STATE.lb.picks !== 'object') STATE.lb.picks = {};
+  if (LB_STRATEGIES.indexOf(STATE.lb.strategy) < 0) STATE.lb.strategy = 'round-robin';
+  return STATE.lb;
+}
+function lbCandidates() {
+  const enabled = STATE.nodes.filter(function (n) { return n.enabled !== false; });
+  const online = enabled.filter(function (n) { return n.online === true; });
+  return online.length ? online : enabled; // fall back to enabled when health unknown
+}
+function pickNode() {
+  const lb = lbState();
+  const cands = lbCandidates();
+  if (!cands.length) return null;
+  let node;
+  if (lb.strategy === 'least-latency') {
+    node = cands.slice().sort(function (a, b) {
+      const la = (a.latency_ms === null || a.latency_ms === undefined) ? Infinity : a.latency_ms;
+      const lbb = (b.latency_ms === null || b.latency_ms === undefined) ? Infinity : b.latency_ms;
+      return la - lbb;
+    })[0];
+  } else if (lb.strategy === 'random') {
+    node = cands[crypto.randomInt(cands.length)];
+  } else {
+    lb.rr = Number(lb.rr || 0) % cands.length;
+    node = cands[lb.rr];
+    lb.rr = (lb.rr + 1) % cands.length;
+  }
+  lb.picks[node.id] = (lb.picks[node.id] || 0) + 1;
+  markDirty();
+  return node;
 }
 function subBase(req) {
   const custom = String(STATE.settings.sub_base_url || '').trim().replace(/\/+$/, '');
   if (custom) return custom;
+  if (Y_CONFIG.publicUrl) return Y_CONFIG.publicUrl;
   return req.protocol + '://' + req.get('host');
 }
 async function qrPng(text) {
@@ -386,8 +466,10 @@ function sweep() {
 // ============ APP ============
 loadState();
 const app = express();
+app.disable('x-powered-by');
+app.set('etag', false);
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '2mb' }));
 app.use(function (req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', '*');
@@ -398,19 +480,42 @@ app.use(function (req, res, next) {
 
 // ---- pages ----
 app.get('/', function (req, res) {
-  res.redirect(checkSession(req) ? '/panel' : '/login');
+  res.redirect(!passwordSet() ? '/setup' : (checkSession(req) ? '/panel' : '/login'));
 });
 app.get('/healthz', function (req, res) { res.json({ ok: true, app: 'yorozuya-panel', version: Y_VERSION }); });
-app.get('/login', function (req, res) { res.type('html').send(LOGIN_PAGE); });
-app.get('/panel', function (req, res) { res.type('html').send(PANEL_PAGE); });
+app.get('/login', function (req, res) {
+  if (!passwordSet()) return res.redirect('/setup');
+  res.type('html').send(LOGIN_PAGE);
+});
+app.get('/setup', function (req, res) {
+  if (passwordSet()) return res.redirect(checkSession(req) ? '/panel' : '/login');
+  res.type('html').send(SETUP_PAGE);
+});
+app.get('/panel', function (req, res) {
+  if (!passwordSet()) return res.redirect('/setup');
+  if (!checkSession(req)) return res.redirect('/login');
+  res.type('html').send(PANEL_PAGE);
+});
 app.get('/p/:sub_key', function (req, res) {
   if (!findUserBySub(req.params.sub_key)) return res.status(404).type('html').send('<h1>404 — not found 🍓</h1>');
   res.type('html').send(SUB_PAGE);
 });
 
 // ---- auth ----
+app.post('/api/setup', function (req, res) {
+  if (passwordSet()) return res.status(403).json({ detail: 'password already set' });
+  const pw = String((req.body && req.body.password) || '');
+  if (pw.length < 4) return res.status(400).json({ detail: 'password too short (min 4 chars)' });
+  STATE.settings.admin_hash = sha256(pw);
+  markDirty(); saveState(true);
+  const token = crypto.randomBytes(32).toString('base64url');
+  SESSIONS.set(token, Date.now() + SESSION_TTL);
+  res.setHeader('Set-Cookie', 'yorozuya_session=' + token + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' + Math.floor(SESSION_TTL / 1000));
+  res.json({ ok: true });
+});
 app.post('/api/login', function (req, res) {
-  if (passOk((req.body && req.body.password) || '', Y_CONFIG.adminPassword)) {
+  const hash = activeHash();
+  if (hash && passOk(sha256(String((req.body && req.body.password) || '')), hash)) {
     const token = crypto.randomBytes(32).toString('base64url');
     SESSIONS.set(token, Date.now() + SESSION_TTL);
     res.setHeader('Set-Cookie', 'yorozuya_session=' + token + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' + Math.floor(SESSION_TTL / 1000));
@@ -442,6 +547,10 @@ app.get('/api/server-info', requireAuth, async function (req, res) {
       online_nodes: STATE.nodes.filter(function (n) { return n.online === true; }).length,
     },
     fun_line: GINTOKI_LINES[crypto.randomInt(GINTOKI_LINES.length)],
+    setup_required: !passwordSet(),
+    public_url: Y_CONFIG.publicUrl || null,
+    keepalive: { enabled: Y_CONFIG.keepaliveMinutes > 0, interval_minutes: Y_CONFIG.keepaliveMinutes, pings: KEEPALIVE.pings, last_ok: KEEPALIVE.lastOk, last_at: KEEPALIVE.lastAt },
+    lb: { strategy: lbState().strategy, candidates: lbCandidates().length },
   });
 });
 app.post('/api/server-info/refresh', requireAuth, async function (req, res) {
@@ -464,7 +573,7 @@ app.post('/api/users', requireAuth, function (req, res) {
     enabled: b.enabled !== false, note: String(b.note || ''), created_at: nowIso(),
   };
   STATE.users.push(user);
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, user: publicUser(user) });
 });
 app.patch('/api/users/:id', requireAuth, function (req, res) {
@@ -483,40 +592,42 @@ app.patch('/api/users/:id', requireAuth, function (req, res) {
   if (b.traffic_used_gb !== undefined) { const v = Number(b.traffic_used_gb); if (isFinite(v)) u.traffic_used_gb = Math.max(0, v); }
   if (b.enabled !== undefined) u.enabled = !!b.enabled;
   if (b.uuid) u.uuid = String(b.uuid);
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, user: publicUser(u) });
 });
 app.delete('/api/users/:id', requireAuth, function (req, res) {
   const u = findUser(req.params.id);
   if (!u) return res.status(404).json({ detail: 'user not found' });
   STATE.users.splice(STATE.users.indexOf(u), 1);
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true });
 });
 app.post('/api/users/:id/reset-traffic', requireAuth, function (req, res) {
   const u = findUser(req.params.id);
   if (!u) return res.status(404).json({ detail: 'user not found' });
   u.traffic_used_gb = 0;
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, user: publicUser(u) });
 });
 app.post('/api/users/:id/rotate-sub', requireAuth, function (req, res) {
   const u = findUser(req.params.id);
   if (!u) return res.status(404).json({ detail: 'user not found' });
   u.sub_key = newSubKey();
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, user: publicUser(u) });
 });
 app.get('/api/users/:id/subscription', requireAuth, function (req, res) {
   const u = findUser(req.params.id);
   if (!u) return res.status(404).json({ detail: 'user not found' });
   const base = subBase(req);
+  const mode = req.query.node === 'lb' ? 'lb' : undefined;
   res.json({
     ok: true, user: publicUser(u),
     sub_url: base + '/api/sub/' + u.sub_key,
     page_url: base + '/p/' + u.sub_key,
     qr_url: base + '/api/sub/' + u.sub_key + '/qr',
-    links: userLinks(u),
+    lb_url: base + '/api/lb/sub/' + u.sub_key,
+    links: userLinks(u, mode),
   });
 });
 app.get('/api/users/:id/qr', requireAuth, async function (req, res) {
@@ -550,7 +661,7 @@ app.post('/api/nodes', requireAuth, function (req, res) {
     last_check: '', online: null, latency_ms: null, resolved_ip: '', country: '', country_code: '',
   };
   STATE.nodes.push(node);
-  markDirty(); saveState(false);
+  markDirty();
   checkNode(node).then(function () { saveState(false); }).catch(function () {});
   res.json({ ok: true, node: publicNode(node) });
 });
@@ -560,14 +671,14 @@ app.patch('/api/nodes/:id', requireAuth, function (req, res) {
   const b = req.body || {};
   NODE_FIELDS.forEach(function (f) { if (b[f] !== undefined && b[f] !== null) n[f] = b[f]; });
   n.port = parseInt(n.port || 443, 10) || 443;
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, node: publicNode(n) });
 });
 app.delete('/api/nodes/:id', requireAuth, function (req, res) {
   const n = findNode(req.params.id);
   if (!n) return res.status(404).json({ detail: 'node not found' });
   STATE.nodes.splice(STATE.nodes.indexOf(n), 1);
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true });
 });
 app.post('/api/nodes/:id/check', requireAuth, async function (req, res) {
@@ -592,8 +703,34 @@ app.post('/api/nodes/check-all', requireAuth, async function (req, res) {
     n.last_check = nowIso(); n.online = ok; n.latency_ms = ms; n.resolved_ip = ip;
     n.country = info.country || ''; n.country_code = info.country_code || '';
   }));
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, nodes: STATE.nodes.map(publicNode) });
+});
+
+// ---- load balancer ----
+app.get('/api/lb', requireAuth, function (req, res) {
+  const lb = lbState();
+  res.json({
+    ok: true, strategy: lb.strategy, rr: lb.rr || 0, picks: lb.picks,
+    candidates: lbCandidates().map(publicNode),
+  });
+});
+app.post('/api/lb', requireAuth, function (req, res) {
+  const lb = lbState();
+  const s = String((req.body && req.body.strategy) || '');
+  if (LB_STRATEGIES.indexOf(s) < 0) return res.status(400).json({ detail: 'strategy must be one of: ' + LB_STRATEGIES.join(', ') });
+  lb.strategy = s;
+  markDirty();
+  res.json({ ok: true, strategy: lb.strategy, rr: lb.rr || 0, picks: lb.picks, candidates: lbCandidates().map(publicNode) });
+});
+app.get('/api/lb/pick', requireAuth, function (req, res) {
+  const n = pickNode();
+  if (!n) return res.status(404).json({ detail: 'no enabled nodes' });
+  const out = { ok: true, strategy: lbState().strategy, node: publicNode(n) };
+  const uname = String(req.query.username || '').trim();
+  const u = uname ? STATE.users.find(function (x) { return x.username === uname; }) : null;
+  if (u) { const e = linkEntry(u, n); if (e) out.link = e.link; }
+  res.json(out);
 });
 
 // ---- tools ----
@@ -617,7 +754,7 @@ app.get('/api/settings', requireAuth, function (req, res) { res.json({ settings:
 app.post('/api/settings', requireAuth, function (req, res) {
   const b = req.body || {};
   if (b.sub_base_url !== undefined) STATE.settings.sub_base_url = String(b.sub_base_url || '').trim().replace(/\/+$/, '');
-  markDirty(); saveState(false);
+  markDirty();
   res.json({ ok: true, settings: STATE.settings });
 });
 app.get('/api/settings/backup', requireAuth, function (req, res) {
@@ -629,22 +766,46 @@ app.post('/api/settings/restore', requireAuth, function (req, res) {
   if (!d || !Array.isArray(d.users) || !Array.isArray(d.nodes)) return res.status(400).json({ detail: 'invalid backup file' });
   STATE.users = d.users;
   STATE.nodes = d.nodes;
-  if (d.settings && typeof d.settings === 'object') STATE.settings = Object.assign({ sub_base_url: '' }, d.settings);
+  if (d.settings && typeof d.settings === 'object') STATE.settings = Object.assign({ sub_base_url: '', admin_hash: '' }, d.settings);
   if (d.ip_cache && typeof d.ip_cache === 'object') STATE.ip_cache = d.ip_cache;
-  markDirty(); saveState(false);
+  if (d.lb && typeof d.lb === 'object') STATE.lb = Object.assign({ strategy: 'round-robin', rr: 0, picks: {} }, d.lb);
+  markDirty(); saveState(true);
   res.json({ ok: true, imported: { users: STATE.users.length, nodes: STATE.nodes.length } });
 });
 
 // ---- public subscription (no auth) ----
-app.get('/api/sub/:sub_key', function (req, res) {
-  const u = findUserBySub(req.params.sub_key);
-  if (!u || !u.enabled || isExpired(u)) return res.status(404).json({ detail: 'not found' });
-  const body = userLinks(u).map(function (x) { return x.link; }).join('\n');
-  if (req.query.format === 'text') return res.type('text/plain; charset=utf-8').send(body ? body + '\n' : '');
+function sendSubBody(res, u, links, lbNodeName) {
+  const body = links.map(function (x) { return x.link; }).join('\n');
+  if (lbNodeName) res.setHeader('X-Yorozuya-LB-Node', lbNodeName);
   const b64 = Buffer.from(body).toString('base64');
   res.setHeader('Content-Disposition', 'inline; filename="' + u.username + '.txt"');
   res.setHeader('Subscription-Userinfo', 'upload=0; download=' + Math.floor(Number(u.traffic_used_gb || 0) * 1073741824) + '; total=' + Math.floor(Number(u.traffic_limit_gb || 0) * 1073741824) + '; expire=0');
   res.type('text/plain; charset=utf-8').send(b64);
+}
+function subLinksFor(u, req) {
+  const mode = req.query.node === 'lb' ? 'lb' : (req.query.node || undefined);
+  return userLinks(u, mode);
+}
+app.get('/api/sub/:sub_key', function (req, res) {
+  const u = findUserBySub(req.params.sub_key);
+  if (!u || !u.enabled || isExpired(u)) return res.status(404).json({ detail: 'not found' });
+  const links = subLinksFor(u, req);
+  if (req.query.format === 'text') {
+    const t = links.map(function (x) { return x.link; }).join('\n');
+    return res.type('text/plain; charset=utf-8').send(t ? t + '\n' : '');
+  }
+  sendSubBody(res, u, links, null);
+});
+// load-balanced subscription: every fetch picks a healthy node (round-robin / least-latency / random)
+app.get('/api/lb/sub/:sub_key', function (req, res) {
+  const u = findUserBySub(req.params.sub_key);
+  if (!u || !u.enabled || isExpired(u)) return res.status(404).json({ detail: 'not found' });
+  const links = userLinks(u, 'lb');
+  if (req.query.format === 'text') {
+    const t = links.map(function (x) { return x.link; }).join('\n');
+    return res.type('text/plain; charset=utf-8').send(t ? t + '\n' : '');
+  }
+  sendSubBody(res, u, links, links.length ? links[0].node : null);
 });
 app.get('/api/sub/:sub_key/qr', async function (req, res) {
   const u = findUserBySub(req.params.sub_key);
@@ -660,12 +821,41 @@ app.get('/api/public/sub/:sub_key', function (req, res) {
     ok: true, username: u.username, expires_at: u.expires_at || '', expired: isExpired(u),
     traffic_limit_gb: Number(u.traffic_limit_gb || 0), traffic_used_gb: Number(u.traffic_used_gb || 0),
     sub_url: base + '/api/sub/' + u.sub_key, qr_url: base + '/api/sub/' + u.sub_key + '/qr',
-    links: userLinks(u),
+    links: subLinksFor(u, req),
   });
 });
 
-// ---- background loop ----
-setInterval(function () { try { sweep(); saveState(false); } catch (e) { console.log('⚠️ bg loop: ' + e.message); } }, 30000);
+// ---- background loop (sweep + health-aware node re-check for the LB) ----
+let LAST_AUTO_CHECK = 0;
+setInterval(function () {
+  try { sweep(); saveState(false); } catch (e) { console.log('⚠️ bg loop: ' + e.message); }
+  if (Y_CONFIG.nodeCheckMinutes > 0 && Date.now() - LAST_AUTO_CHECK >= Y_CONFIG.nodeCheckMinutes * 60000) {
+    LAST_AUTO_CHECK = Date.now();
+    STATE.nodes.forEach(function (n, i) {
+      if (n.enabled === false) return;
+      setTimeout(function () { checkNode(n).catch(function () {}); }, i * 400); // staggered — weak-server friendly
+    });
+  }
+}, 30000);
+
+// ---- cron: keep-alive self-ping (keeps free hosts awake) ----
+const KEEPALIVE = { pings: 0, lastOk: false, lastAt: '' };
+function selfPingUrl() {
+  if (Y_CONFIG.publicUrl) return Y_CONFIG.publicUrl + '/healthz';
+  return 'http://127.0.0.1:' + Y_CONFIG.port + '/healthz';
+}
+async function selfPing() {
+  KEEPALIVE.pings++;
+  try {
+    const r = await fetch(selfPingUrl());
+    KEEPALIVE.lastOk = r.ok;
+  } catch (e) { KEEPALIVE.lastOk = false; }
+  KEEPALIVE.lastAt = nowIso();
+  if (!KEEPALIVE.lastOk) console.log('⚠️ keep-alive ping failed (' + selfPingUrl() + ')');
+}
+if (Y_CONFIG.keepaliveMinutes > 0) {
+  setInterval(function () { selfPing().catch(function () {}); }, Y_CONFIG.keepaliveMinutes * 60000);
+}
 
 // ============ EMBEDDED FRONTEND (3 pages, Gintama theme) ============
 // NOTE: pages use template literals — inner code must avoid backticks and ${...}.
@@ -840,6 +1030,64 @@ function login() {
       err.textContent = '❌ رمز اشتباهه! ساداهارو هم نتونست تأییدت کنه 🐶';
       card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
       btn.disabled = false;
+    })
+    .catch(function () { err.textContent = '❌ خطای اتصال به سرور'; btn.disabled = false; });
+}
+document.getElementById('pw').focus();
+</script>
+</body>
+</html>`;
+
+const SETUP_PAGE = `<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍓 ساخت رمز | یوروزویا پنل</title>
+<style>` + SHARED_CSS + `</style>
+</head>
+<body>
+<div class="strawberry-rain" id="rain"></div>
+<div class="login-wrap">
+  <div class="card login-card wood" id="card" style="padding-top:26px">
+    <div class="logo" style="margin:0 auto">` + LOGO_SVG + `</div>
+    <div class="kanji">万事屋</div>
+    <h1>🍓 یوروزویا پنل</h1>
+    <div class="tag">اولین ورود! یه رمز برای مغازه انتخاب کن — فقط همین یه بار 🔐</div>
+    <input type="password" id="pw" placeholder="رمز جدید (حداقل ۴ کاراکتر)…" autocomplete="new-password">
+    <input type="password" id="pw2" placeholder="تکرار رمز…" autocomplete="new-password" style="margin-top:10px" onkeydown="if(event.key==='Enter')setup()">
+    <button class="btn" onclick="setup()" id="btn">🔐 ساخت رمز و ورود به مغازه</button>
+    <div class="login-err" id="err"></div>
+    <div class="tag" style="margin-top:6px;font-size:.75rem">🔐 رمز به‌صورت هش (SHA-256) ذخیره می‌شه — یادت نره! 😅</div>
+  </div>
+</div>
+<script>
+var rain = document.getElementById('rain');
+var fruits = ['🍓','🥛','🍓','🌸','🍓'];
+for (var i = 0; i < 24; i++) {
+  var s = document.createElement('span');
+  s.textContent = fruits[i % 5];
+  s.style.right = Math.random() * 100 + '%';
+  s.style.fontSize = (14 + Math.random() * 22) + 'px';
+  s.style.animationDuration = (5 + Math.random() * 7) + 's';
+  s.style.animationDelay = (-Math.random() * 10) + 's';
+  rain.appendChild(s);
+}
+function setup() {
+  var pw = document.getElementById('pw').value;
+  var pw2 = document.getElementById('pw2').value;
+  var err = document.getElementById('err');
+  var btn = document.getElementById('btn');
+  var card = document.getElementById('card');
+  err.textContent = '';
+  function shake() { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  if (pw.length < 4) { err.textContent = '❌ رمز باید حداقل ۴ کاراکتر باشه!'; shake(); return; }
+  if (pw !== pw2) { err.textContent = '❌ تکرار رمز اشتباهه!'; shake(); return; }
+  btn.disabled = true;
+  fetch('/api/setup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) })
+    .then(function (r) {
+      if (r.ok) { location.href = '/panel'; return; }
+      return r.json().then(function (d) { err.textContent = '❌ ' + (d.detail || 'خطا'); btn.disabled = false; shake(); });
     })
     .catch(function () { err.textContent = '❌ خطای اتصال به سرور'; btn.disabled = false; });
 }
@@ -1069,10 +1317,13 @@ function openLinks(id) {
       + '<div class="link-row"><span class="meta">🌐 صفحه اشتراک</span><code>' + esc(d.page_url) + '</code>'
       + '<button class="btn small blue" id="cp-page">📋</button>'
       + '<a class="btn small ghost" href="' + esc(d.page_url) + '" target="_blank">↗️</a></div>'
+      + '<div class="link-row"><span class="meta">⚖️ لودبالانسر (هر بار یه نود)</span><code>' + esc(d.lb_url) + '</code>'
+      + '<button class="btn small gold" id="cp-lb">📋</button></div>'
       + '<div class="qr-box"><img src="' + esc(d.qr_url) + '" alt="QR"></div>'
       + '<h3 style="margin-top:8px">⚔️ کانفیگ‌های تکی (' + d.links.length + ')</h3>' + rows;
     document.getElementById('cp-sub').onclick = function () { copyText(d.sub_url, '🔗 لینک ساب کپی شد!'); };
     document.getElementById('cp-page').onclick = function () { copyText(d.page_url, '🌐 کپی شد!'); };
+    document.getElementById('cp-lb').onclick = function () { copyText(d.lb_url, '⚖️ لینک LB کپی شد!'); };
   }).catch(function (e) { document.getElementById('modal-body').innerHTML = '❌ ' + esc(e.message); });
 }
 function loadNodes() {
@@ -1220,8 +1471,33 @@ function doRestore(input) {
   };
   rd.readAsText(f);
 }
+function loadLb() {
+  return api('GET', '/api/lb').then(function (d) {
+    document.getElementById('lb-strategy').value = d.strategy;
+    document.getElementById('lb-cur').textContent = d.strategy;
+    document.getElementById('lb-cands').textContent = d.candidates.length + ' نود';
+    var total = 0;
+    Object.keys(d.picks || {}).forEach(function (k) { total += d.picks[k]; });
+    document.getElementById('lb-total').textContent = total;
+    var tb = document.getElementById('lb-body');
+    if (!d.candidates.length) { tb.innerHTML = '<tr><td colspan="4" class="muted">هنوز نودی نیست…</td></tr>'; return; }
+    var html = '';
+    d.candidates.forEach(function (n) {
+      var st = n.online === true ? '<span class="badge on">آنلاین 💚</span>'
+        : n.online === false ? '<span class="badge off">آفلاین 💔</span>' : '<span class="badge warn">چک نشده</span>';
+      html += '<tr><td>' + (n.flag || '🏳️') + ' <b>' + esc(n.name) + '</b></td><td>' + st + '</td><td>' + (n.latency_ms !== null && n.latency_ms !== undefined ? '⚡ ' + n.latency_ms + 'ms' : '–') + '</td><td>' + (d.picks[n.id] || 0) + ' بار</td></tr>';
+    });
+    tb.innerHTML = html;
+  }).catch(function () {});
+}
+function saveLb() {
+  api('POST', '/api/lb', { strategy: val('lb-strategy') }).then(function (d) {
+    toast('💾 استراتژی لودبالانسر ذخیره شد: ' + d.strategy);
+    return loadLb();
+  }).catch(function (e) { toast('❌ ' + e.message, true); });
+}
 function loadAll() {
-  return loadServerInfo().then(function () { return Promise.all([loadUsers(), loadNodes(), loadSettings()]); });
+  return loadServerInfo().then(function () { return Promise.all([loadUsers(), loadNodes(), loadSettings(), loadLb()]); });
 }
 loadAll();
 setInterval(function () {
@@ -1255,6 +1531,7 @@ const PANEL_PAGE = `<!DOCTYPE html>
     <button class="tab active" data-tab="dash" onclick="showTab('dash')">📊 داشبورد</button>
     <button class="tab" data-tab="users" onclick="showTab('users')">👥 کاربران</button>
     <button class="tab" data-tab="nodes" onclick="showTab('nodes')">🛰 نودها</button>
+    <button class="tab" data-tab="lb" onclick="showTab('lb')">⚖️ لودبالانسر</button>
     <button class="tab" data-tab="tools" onclick="showTab('tools')">🛠 ابزار</button>
     <button class="tab" data-tab="settings" onclick="showTab('settings')">⚙️ تنظیمات</button>
   </div>
@@ -1304,6 +1581,37 @@ const PANEL_PAGE = `<!DOCTYPE html>
       <button class="btn blue" onclick="checkAllNodes(this)">📡 چک همه نودها</button>
     </div>
     <div class="grid c2" id="nodes-grid"><div class="card muted">در حال بارگذاری…</div></div>
+  </div>
+  <div class="tabpane" id="pane-lb">
+    <div class="grid c2">
+      <div class="card">
+        <h3>⚖️ استراتژی لودبالانسر</h3>
+        <div class="muted" style="font-size:.85rem;margin-bottom:10px">هر بار که یه کانفیگ درخواست می‌شه، یه نود سالم انتخاب می‌شه و بار بین نودها پخش می‌شه.</div>
+        <label class="lbl">استراتژی</label>
+        <select id="lb-strategy">
+          <option value="round-robin">🌀 گردشی (Round-Robin)</option>
+          <option value="least-latency">⚡ کمترین پینگ (Least-Latency)</option>
+          <option value="random">🎲 تصادفی (Random)</option>
+        </select>
+        <div style="margin-top:12px"><button class="btn green" onclick="saveLb()">💾 ذخیره استراتژی</button></div>
+      </div>
+      <div class="card">
+        <h3>🔗 لینک ساب لودبالانسر</h3>
+        <div class="muted" style="font-size:.85rem;margin-bottom:10px">از بین لینک‌های هر کاربر (دکمه 🔗 لینک‌ها) یه لینک ⚖️ LB هم هست — هر بار یه نود سالم می‌ده. عالیه برای ربات‌های دیسکورد 🤖</div>
+        <div class="kv"><span>استراتژی فعلی</span><b id="lb-cur">–</b></div>
+        <div class="kv"><span>نودهای کاندید</span><b id="lb-cands">–</b></div>
+        <div class="kv"><span>کل انتخاب‌ها</span><b id="lb-total">–</b></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>📊 آمار انتخاب</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>نود</th><th>وضعیت</th><th>پینگ</th><th>تعداد انتخاب</th></tr></thead>
+          <tbody id="lb-body"><tr><td colspan="4" class="muted">در حال بارگذاری…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
   </div>
   <div class="tabpane" id="pane-tools">
     <div class="card" style="max-width:640px">
@@ -1487,10 +1795,20 @@ const SUB_PAGE = `<!DOCTYPE html>
 </html>`;
 
 // ============ START ============
+function shutdown() { try { saveState(true); } catch (e) {} process.exit(0); }
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
 if (require.main === module) {
   app.listen(Y_CONFIG.port, '0.0.0.0', function () {
-    console.log('🍓 YorozuyaPanel Node v' + Y_VERSION + ' on :' + Y_CONFIG.port + ' — data: ' + DATA_DIR);
-    if (DEFAULT_PASSWORD) console.log('⚠️  Using default ADMIN_PASSWORD — set ADMIN_PASSWORD env var!');
+    const base = Y_CONFIG.publicUrl || ('http://localhost:' + Y_CONFIG.port);
+    console.log('🍓 YorozuyaPanel Node v' + Y_VERSION + ' · 万事屋');
+    console.log('⚙️  protocols ready: vless · vmess · trojan · ss');
+    console.log('🌐 listening on 0.0.0.0:' + Y_CONFIG.port + ' · data: ' + DATA_DIR);
+    if (!passwordSet()) console.log('🔐 first run — set admin password at ' + base + '/setup');
+    else if (DEFAULT_PASSWORD) console.log('⚠️  default password active — change ADMIN_PASSWORD!');
+    if (Y_CONFIG.keepaliveMinutes > 0) console.log('⏰ keep-alive cron: self-ping every ' + Y_CONFIG.keepaliveMinutes + ' min');
+    console.log('📍 Web Panel path: /panel  →  ' + base + '/panel');
   });
 }
 
