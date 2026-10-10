@@ -29,7 +29,7 @@
  * ====================================================================
  */
 
-$Y_VERSION = '1.1.0';
+$Y_VERSION = '1.2.0';
 
 // ============ CONFIG (env-driven, BK-style) ============
 function y_env($name, $default = '') {
@@ -235,6 +235,7 @@ function y_public_node($n) {
         'sni' => $n['sni'] ?? '', 'path' => $n['path'] ?? '', 'host' => $n['host'] ?? '', 'fp' => $n['fp'] ?? '', 'alpn' => $n['alpn'] ?? '',
         'reality_pbk' => $n['reality_pbk'] ?? '', 'reality_sid' => $n['reality_sid'] ?? '', 'reality_spx' => $n['reality_spx'] ?? '',
         'flow' => $n['flow'] ?? '', 'ss_method' => $n['ss_method'] ?? 'chacha20-ietf-poly1305', 'ss_password' => $n['ss_password'] ?? '',
+        'mode' => $n['mode'] ?? '', 'header' => $n['header'] ?? '',
         'enabled' => !array_key_exists('enabled', $n) || $n['enabled'] !== false, 'created_at' => $n['created_at'] ?? '',
         'last_check' => $n['last_check'] ?? '',
         'online' => $online === null ? null : (bool)$online,
@@ -455,10 +456,13 @@ function y_build_link($userUuid, $remark, $n) {
         if (!empty($n['fp'])) $p['fp'] = $n['fp'];
         if (!empty($n['alpn'])) $p['alpn'] = $n['alpn'];
         $p['type'] = $netw;
-        if (in_array($netw, array('ws', 'grpc', 'xhttp'), true) && !empty($n['path'])) {
-            $p[$netw === 'grpc' ? 'serviceName' : 'path'] = $n['path'];
+        if (in_array($netw, array('ws', 'grpc', 'xhttp', 'h2'), true)) {
+            if (!empty($n['path'])) $p[$netw === 'grpc' ? 'serviceName' : 'path'] = $n['path'];
+            if (!empty($n['host'])) $p['host'] = $n['host'];
+            if ($netw === 'h2' && empty($n['host']) && !empty($n['sni'])) $p['host'] = $n['sni'];
+            if (in_array($netw, array('grpc', 'xhttp'), true) && !empty($n['mode'])) $p['mode'] = $n['mode'];
         }
-        if (!empty($n['host'])) $p['host'] = $n['host'];
+        if ($netw === 'kcp') $p['header'] = ($n['header'] ?? '') ?: 'none';
         if ($sec === 'reality') {
             if (!empty($n['reality_pbk'])) $p['pbk'] = $n['reality_pbk'];
             if (!empty($n['reality_sid'])) $p['sid'] = $n['reality_sid'];
@@ -470,7 +474,7 @@ function y_build_link($userUuid, $remark, $n) {
     if ($proto === 'vmess') {
         $cfg = array(
             'v' => '2', 'ps' => $remark, 'add' => $addr, 'port' => (string)$port, 'id' => $userUuid,
-            'aid' => '0', 'scy' => 'auto', 'net' => $netw, 'type' => 'none',
+            'aid' => '0', 'scy' => 'auto', 'net' => $netw, 'type' => ($netw === 'kcp' && !empty($n['header'])) ? $n['header'] : 'none',
             'host' => ($n['host'] ?? '') ?: ($n['sni'] ?? ''), 'path' => $n['path'] ?? '',
             'tls' => $sec === 'tls' ? 'tls' : '', 'sni' => $n['sni'] ?? '', 'fp' => $n['fp'] ?? '', 'alpn' => $n['alpn'] ?? '',
         );
@@ -481,7 +485,10 @@ function y_build_link($userUuid, $remark, $n) {
         if (!empty($n['sni'])) $p['sni'] = $n['sni'];
         if (!empty($n['fp'])) $p['fp'] = $n['fp'];
         if ($netw !== 'tcp') $p['type'] = $netw;
-        if (!empty($n['path'])) $p['path'] = $n['path'];
+        if ($netw === 'grpc') {
+            if (!empty($n['path'])) $p['serviceName'] = $n['path'];
+            if (!empty($n['mode'])) $p['mode'] = $n['mode'];
+        } elseif (!empty($n['path'])) $p['path'] = $n['path'];
         if (!empty($n['host'])) $p['host'] = $n['host'];
         return 'trojan://' . $userUuid . '@' . $addr . ':' . $port . '?' . y_q($p) . '#' . $rm;
     }
@@ -500,6 +507,7 @@ function y_link_entry($user, $n) {
     if ($link === '') return null;
     return array(
         'node' => $n['name'], 'node_id' => $n['id'], 'protocol' => $n['protocol'] ?? 'vless',
+        'network' => $n['network'] ?? 'tcp',
         'country' => $n['country'] ?? '', 'country_code' => $cc,
         'flag' => $cc !== '' ? y_flag($cc) : '', 'link' => $link,
     );
@@ -3793,7 +3801,7 @@ function openLinks(id) {
     var rows = '';
     if (!d.links.length) { rows = '<div class="muted">نود فعالی نیست… اول یه نود بساز 🛰</div>'; }
     d.links.forEach(function (l, i) {
-      rows += '<div class="link-row"><span class="meta">' + l.flag + ' ' + esc(l.node) + ' <span class="badge info">' + esc(l.protocol) + '</span></span><code>' + esc(l.link.slice(0, 70)) + '…</code>'
+      rows += '<div class="link-row"><span class="meta">' + l.flag + ' ' + esc(l.node) + ' <span class="badge info">' + esc(l.protocol) + (l.network ? '/' + esc(l.network) : '') + '</span></span><code>' + esc(l.link.slice(0, 70)) + '…</code>'
         + '<button class="btn small" onclick="copyLink(' + i + ')">📋</button></div>';
     });
     document.getElementById('modal-body').innerHTML =
@@ -3828,7 +3836,7 @@ function renderNodes() {
       + '<div class="muted" style="font-size:.78rem">' + esc(n.country || 'کشور نامشخص') + ' · <span class="mono">' + esc(n.resolved_ip || n.address) + ':' + n.port + '</span></div></div>'
       + '<span class="proto badge info">' + esc(n.protocol) + (n.security !== 'none' ? '/' + esc(n.security) : '') + '</span></div>'
       + '<div>' + st + ' <span class="muted" style="font-size:.8rem">' + (n.latency_ms !== null && n.latency_ms !== undefined ? '⚡ ' + n.latency_ms + 'ms' : '') + (n.last_check ? ' · ' + faDate(n.last_check) : '') + '</span></div>'
-      + '<div class="muted mono" style="font-size:.75rem">' + esc(n.address) + ':' + n.port + ' · ' + esc(n.network) + (n.sni ? ' · sni:' + esc(n.sni) : '') + '</div>'
+      + '<div class="muted mono" style="font-size:.75rem">' + esc(n.address) + ':' + n.port + ' · ' + esc(n.network) + (n.mode ? ' · mode:' + esc(n.mode) : '') + (n.sni ? ' · sni:' + esc(n.sni) : '') + '</div>'
       + '<div class="foot"><button class="btn small blue" onclick="checkNode(\'' + n.id + '\',this)">📡 چک</button>'
       + '<button class="btn small ghost" onclick="openNodeModal(\'' + n.id + '\')">✏️ ویرایش</button>'
       + '<button class="btn small ghost" onclick="toggleNode(\'' + n.id + '\')">' + (n.enabled ? '⏸' : '▶️') + '</button>'
@@ -3836,12 +3844,28 @@ function renderNodes() {
   });
   g.innerHTML = html;
 }
-function sel(id, opts, cur) {
-  var h = '<select id="' + id + '">';
+function sel(id, opts, cur, onchange) {
+  var h = '<select id="' + id + '"' + (onchange ? ' onchange="' + onchange + '"' : '') + '>';
   opts.forEach(function (o) { h += '<option value="' + o + '"' + (o === cur ? ' selected' : '') + '>' + (o === '' ? '(خالی)' : o) + '</option>'; });
   return h + '</select>';
 }
 function gfield(n, k) { return esc(n ? (n[k] === undefined || n[k] === null ? '' : n[k]) : ''); }
+var NETWORKS_BY_PROTO = {
+  vless: ['tcp', 'ws', 'grpc', 'xhttp', 'kcp'],
+  vmess: ['tcp', 'ws', 'grpc', 'h2', 'kcp'],
+  trojan: ['tcp', 'ws', 'grpc'],
+  ss: ['tcp'],
+};
+function filterNetwork() {
+  var s = document.getElementById('n-network');
+  if (!s) return;
+  var allowed = NETWORKS_BY_PROTO[val('n-protocol')] || ['tcp'];
+  var cur = s.value;
+  if (allowed.indexOf(cur) < 0) cur = allowed[0];
+  var opts = '';
+  allowed.forEach(function (o) { opts += '<option value="' + o + '"' + (o === cur ? ' selected' : '') + '>' + o + '</option>'; });
+  s.innerHTML = opts;
+}
 function openNodeModal(id) {
   var n = id ? findN(id) : null;
   openModal(n ? '✏️ ویرایش ' + n.name : '➕ نود جدید',
@@ -3849,8 +3873,8 @@ function openNodeModal(id) {
     + '<div><label class="lbl">اسم نود *</label><input id="n-name" value="' + gfield(n, 'name') + '" placeholder="آلمان ۱ 🇩🇪"></div>'
     + '<div><label class="lbl">آدرس (دامنه/آی‌پی) *</label><input id="n-address" value="' + gfield(n, 'address') + '" placeholder="de1.example.com" style="direction:ltr;text-align:left"></div>'
     + '<div><label class="lbl">پورت</label><input id="n-port" type="number" value="' + (n ? n.port : 443) + '" style="direction:ltr"></div>'
-    + '<div><label class="lbl">پروتکل</label>' + sel('n-protocol', ['vless', 'vmess', 'trojan', 'ss'], n ? n.protocol : 'vless') + '</div>'
-    + '<div><label class="lbl">نتورک</label>' + sel('n-network', ['tcp', 'ws', 'grpc'], n ? n.network : 'tcp') + '</div>'
+    + '<div><label class="lbl">پروتکل</label>' + sel('n-protocol', ['vless', 'vmess', 'trojan', 'ss'], n ? n.protocol : 'vless', 'filterNetwork()') + '</div>'
+    + '<div><label class="lbl">نتورک</label>' + sel('n-network', NETWORKS_BY_PROTO[(n && n.protocol) || 'vless'], n ? n.network : 'tcp') + '</div>'
     + '<div><label class="lbl">امنیت</label>' + sel('n-security', ['none', 'tls', 'reality'], n ? n.security : 'none') + '</div>'
     + '<div><label class="lbl">SNI</label><input id="n-sni" value="' + gfield(n, 'sni') + '" placeholder="example.com" style="direction:ltr;text-align:left"></div>'
     + '<div><label class="lbl">Path / ServiceName</label><input id="n-path" value="' + gfield(n, 'path') + '" placeholder="/ws" style="direction:ltr;text-align:left"></div>'
@@ -3858,6 +3882,8 @@ function openNodeModal(id) {
     + '<div><label class="lbl">Fingerprint</label>' + sel('n-fp', ['', 'chrome', 'firefox', 'safari', 'ios', 'android', 'edge', 'random'], n ? n.fp : '') + '</div>'
     + '<div><label class="lbl">ALPN</label><input id="n-alpn" value="' + gfield(n, 'alpn') + '" placeholder="h2,http/1.1" style="direction:ltr;text-align:left"></div>'
     + '<div><label class="lbl">Flow (vless)</label><input id="n-flow" value="' + gfield(n, 'flow') + '" placeholder="xtls-rprx-vision" style="direction:ltr;text-align:left"></div>'
+    + '<div><label class="lbl">Mode (grpc/xhttp)</label><input id="n-mode" value="' + gfield(n, 'mode') + '" placeholder="gun / multi / auto" style="direction:ltr;text-align:left"></div>'
+    + '<div><label class="lbl">Header (kcp)</label>' + sel('n-header', ['', 'none', 'wechat', 'utp', 'srtp', 'dtls', 'wireguard'], n ? n.header : '') + '</div>'
     + '</div>'
     + '<div class="card" style="margin-top:12px;padding:12px"><b style="font-size:.85rem">🌀 REALITY (فقط اگه امنیت = reality)</b><div class="form-grid">'
     + '<div class="full"><label class="lbl">Public Key (pbk)</label><input id="n-pbk" value="' + gfield(n, 'reality_pbk') + '" style="direction:ltr;text-align:left"></div>'
@@ -3878,6 +3904,7 @@ function saveNode(id) {
     protocol: val('n-protocol'), network: val('n-network'), security: val('n-security'),
     sni: val('n-sni').trim(), path: val('n-path').trim(), host: val('n-host').trim(),
     fp: val('n-fp'), alpn: val('n-alpn').trim(), flow: val('n-flow').trim(),
+    mode: val('n-mode').trim(), header: val('n-header').trim(),
     reality_pbk: val('n-pbk').trim(), reality_sid: val('n-sid').trim(), reality_spx: val('n-spx').trim(),
     ss_method: val('n-ssmethod'), ss_password: val('n-sspass'),
     enabled: document.getElementById('n-enabled').checked,
@@ -6564,7 +6591,7 @@ fetch(API_BASE + 'api/public/sub/' + encodeURIComponent(KEY)).then(function (r) 
   d.links.forEach(function (l, i) {
     var row = document.createElement('div');
     row.className = 'link-row';
-    row.innerHTML = '<span class="meta">' + l.flag + ' ' + esc(l.node) + ' <span class="badge info">' + esc(l.protocol) + '</span></span><code>' + esc(l.link.slice(0, 60)) + '…</code>';
+    row.innerHTML = '<span class="meta">' + l.flag + ' ' + esc(l.node) + ' <span class="badge info">' + esc(l.protocol) + (l.network ? '/' + esc(l.network) : '') + '</span></span><code>' + esc(l.link.slice(0, 60)) + '…</code>';
     var b = document.createElement('button');
     b.className = 'btn small'; b.textContent = '📋 کپی';
     b.onclick = (function (idx) { return function () { copyCfg(idx); }; })(i);
@@ -6986,7 +7013,7 @@ function y_h_api_qr_stub() {
 
 // ============ HANDLERS: nodes ============
 $NODE_FIELDS = array('name', 'address', 'port', 'protocol', 'network', 'security', 'sni', 'path', 'host', 'fp', 'alpn',
-    'reality_pbk', 'reality_sid', 'reality_spx', 'flow', 'ss_method', 'ss_password', 'enabled');
+    'reality_pbk', 'reality_sid', 'reality_spx', 'flow', 'ss_method', 'ss_password', 'mode', 'header', 'enabled');
 
 function y_h_api_nodes_list() {
     global $STATE;
@@ -7013,6 +7040,7 @@ function y_h_api_nodes_create() {
         'fp' => (string)($b['fp'] ?? ''), 'alpn' => (string)($b['alpn'] ?? ''),
         'reality_pbk' => (string)($b['reality_pbk'] ?? ''), 'reality_sid' => (string)($b['reality_sid'] ?? ''), 'reality_spx' => (string)($b['reality_spx'] ?? ''),
         'flow' => (string)($b['flow'] ?? ''),
+        'mode' => (string)($b['mode'] ?? ''), 'header' => (string)($b['header'] ?? ''),
         'ss_method' => (string)($b['ss_method'] ?? 'chacha20-ietf-poly1305'), 'ss_password' => (string)($b['ss_password'] ?? ''),
         'enabled' => !array_key_exists('enabled', $b) || $b['enabled'] !== false,
         'created_at' => y_now_iso(),
