@@ -23,7 +23,7 @@
  *  original. Fan-made Gintama theme, not affiliated with publishers.
  * ====================================================================
  */
-const Y_VERSION = '1.2.1';
+const Y_VERSION = '1.2.2';
 
 const express = require('express');
 const QRCode = require('qrcode');
@@ -783,39 +783,56 @@ app.post('/api/settings/restore', requireAuth, function (req, res) {
   res.json({ ok: true, imported: { users: STATE.users.length, nodes: STATE.nodes.length } });
 });
 
-// ---- public subscription (no auth) ----
-function sendSubBody(res, u, links, lbNodeName) {
-  const body = links.map(function (x) { return x.link; }).join('\n');
-  if (lbNodeName) res.setHeader('X-Yorozuya-LB-Node', lbNodeName);
-  const b64 = Buffer.from(body).toString('base64');
-  res.setHeader('Content-Disposition', 'inline; filename="' + u.username + '.txt"');
-  res.setHeader('Subscription-Userinfo', 'upload=0; download=' + Math.floor(Number(u.traffic_used_gb || 0) * 1073741824) + '; total=' + Math.floor(Number(u.traffic_limit_gb || 0) * 1073741824) + '; expire=0');
-  res.type('text/plain; charset=utf-8').send(b64);
-}
+// ---- public subscription (no auth) — Blue-Knight-exact response (same headers/encoding as Blue-Knight-Panel-V3) ----
 function subLinksFor(u, req) {
   const mode = req.query.node === 'lb' ? 'lb' : (req.query.node || undefined);
   return userLinks(u, mode);
 }
+function findActiveUser(sub_key) {
+  const u = findUserBySub(sub_key);
+  if (!u || !u.enabled || isExpired(u)) return null;
+  return u;
+}
+function serveSub(req, res, u, links, forceFormat, lbNodeName) {
+  const body = links.map(function (x) { return x.link; }).join('\n');
+  if (lbNodeName) res.setHeader('X-Yorozuya-LB-Node', lbNodeName);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="BlueKnight.txt"');
+  res.setHeader('Profile-Update-Interval', '24');
+  res.setHeader('Subscription-Userinfo', 'upload=0; download=0; total=0; expire=0');
+  const fmt = forceFormat || req.query.format || '';
+  if (fmt === 'text') return res.send(body ? body + '\n' : '');
+  if (fmt === 'raw') return res.send(body);
+  res.send(Buffer.from(body).toString('base64'));
+}
 app.get('/api/sub/:sub_key', function (req, res) {
-  const u = findUserBySub(req.params.sub_key);
-  if (!u || !u.enabled || isExpired(u)) return res.status(404).json({ detail: 'not found' });
-  const links = subLinksFor(u, req);
-  if (req.query.format === 'text') {
-    const t = links.map(function (x) { return x.link; }).join('\n');
-    return res.type('text/plain; charset=utf-8').send(t ? t + '\n' : '');
-  }
-  sendSubBody(res, u, links, null);
+  const u = findActiveUser(req.params.sub_key);
+  if (!u) return res.status(404).json({ detail: 'not found' });
+  serveSub(req, res, u, subLinksFor(u, req), null, null);
+});
+// Blue-Knight-style subscription paths (same output as Blue-Knight-Panel-V3: /sub + /base64 → base64, /raw → plain text)
+app.get('/sub/:sub_key', function (req, res) {
+  const u = findActiveUser(req.params.sub_key);
+  if (!u) return res.status(404).json({ detail: 'not found' });
+  serveSub(req, res, u, subLinksFor(u, req), 'b64', null);
+});
+app.get('/base64/:sub_key', function (req, res) {
+  const u = findActiveUser(req.params.sub_key);
+  if (!u) return res.status(404).json({ detail: 'not found' });
+  serveSub(req, res, u, subLinksFor(u, req), 'b64', null);
+});
+app.get('/raw/:sub_key', function (req, res) {
+  const u = findActiveUser(req.params.sub_key);
+  if (!u) return res.status(404).json({ detail: 'not found' });
+  serveSub(req, res, u, subLinksFor(u, req), 'raw', null);
 });
 // load-balanced subscription: every fetch picks a healthy node (round-robin / least-latency / random)
 app.get('/api/lb/sub/:sub_key', function (req, res) {
-  const u = findUserBySub(req.params.sub_key);
-  if (!u || !u.enabled || isExpired(u)) return res.status(404).json({ detail: 'not found' });
+  const u = findActiveUser(req.params.sub_key);
+  if (!u) return res.status(404).json({ detail: 'not found' });
   const links = userLinks(u, 'lb');
-  if (req.query.format === 'text') {
-    const t = links.map(function (x) { return x.link; }).join('\n');
-    return res.type('text/plain; charset=utf-8').send(t ? t + '\n' : '');
-  }
-  sendSubBody(res, u, links, links.length ? links[0].node : null);
+  serveSub(req, res, u, links, req.query.format || null, links.length ? links[0].node : null);
 });
 app.get('/api/sub/:sub_key/qr', async function (req, res) {
   const u = findUserBySub(req.params.sub_key);
