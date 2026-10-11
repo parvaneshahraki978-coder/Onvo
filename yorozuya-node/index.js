@@ -23,7 +23,7 @@
  *  original. Fan-made Gintama theme, not affiliated with publishers.
  * ====================================================================
  */
-const Y_VERSION = '1.2.2';
+const Y_VERSION = '1.3.0';
 
 const express = require('express');
 const QRCode = require('qrcode');
@@ -349,7 +349,7 @@ function buildLink(userUuid, remark, n) {
     if (n.fp) p.fp = n.fp;
     if (n.alpn) p.alpn = n.alpn;
     p.type = netw;
-    if (netw === 'ws' || netw === 'grpc' || netw === 'xhttp' || netw === 'h2') {
+    if (netw === 'ws' || netw === 'grpc' || netw === 'xhttp' || netw === 'h2' || netw === 'httpupgrade') {
       if (n.path) p[netw === 'grpc' ? 'serviceName' : 'path'] = n.path;
       if (n.host) p.host = n.host;
       if (netw === 'h2' && !n.host && n.sni) p.host = n.sni;
@@ -374,7 +374,7 @@ function buildLink(userUuid, remark, n) {
     return 'vmess://' + Buffer.from(JSON.stringify(cfg)).toString('base64');
   }
   if (proto === 'trojan') {
-    const p = { security: sec !== 'none' ? sec : 'tls' };
+    const p = { security: sec };
     if (n.sni) p.sni = n.sni;
     if (n.fp) p.fp = n.fp;
     if (netw !== 'tcp') p.type = netw;
@@ -413,6 +413,36 @@ function userLinks(user, mode) {
     const e = linkEntry(user, n);
     if (e) out.push(e);
   });
+  return out;
+}
+
+// ============ BLUE KNIGHT DEFAULT PROTOCOL VARIANTS (per user + node) ============
+function variantNode(node, overrides) {
+  const n = {};
+  Object.keys(node).forEach(function (k) { n[k] = node[k]; });
+  Object.keys(overrides).forEach(function (k) { n[k] = overrides[k]; });
+  return n;
+}
+function buildVariants(user, node) {
+  const out = [];
+  const path = node.path || '/';
+  function add(name, label, overrides) {
+    const vn = variantNode(node, overrides);
+    const link = buildLink(user.uuid, node.name + ' - ' + name, vn);
+    if (link) out.push({ node_id: node.id, node: node.name, name: name, label: label, protocol: vn.protocol, network: vn.network, security: vn.security, link: link });
+  }
+  add('VLESS-WS', 'WebSocket Direct / CDN', { protocol: 'vless', network: 'ws', security: 'none', path: path, host: node.host || '', sni: '', fp: '', alpn: '' });
+  add('VLESS-WS-TLS', 'CDN Cloudflare Compatible', { protocol: 'vless', network: 'ws', security: 'tls', path: path, host: node.host || '', sni: node.sni || '', fp: node.fp || 'chrome', alpn: node.alpn || 'http/1.1' });
+  add('VLESS-HTTPUpgrade', 'HTTP Upgrade', { protocol: 'vless', network: 'httpupgrade', security: 'none', path: path, host: '', sni: '', fp: '', alpn: '' });
+  add('VLESS-gRPC', 'gRPC Direct', { protocol: 'vless', network: 'grpc', security: 'none', path: path, host: '', sni: '', fp: '', alpn: '' });
+  add('Trojan-WS', 'Trojan WebSocket Direct', { protocol: 'trojan', network: 'ws', security: 'none', path: path, host: node.host || '', sni: '', fp: '', alpn: '' });
+  add('Trojan-gRPC-TLS', 'CDN gRPC Alternative', { protocol: 'trojan', network: 'grpc', security: 'tls', path: path, host: '', sni: node.sni || node.address || '', fp: 'chrome', alpn: 'h2' });
+  add('VMess-WS', 'VMess WebSocket Direct', { protocol: 'vmess', network: 'ws', security: 'none', path: path, host: node.host || '', sni: '', fp: '', alpn: '' });
+  add('VMess-WS-TLS', 'VMess WebSocket TLS', { protocol: 'vmess', network: 'ws', security: 'tls', path: path, host: node.host || '', sni: node.sni || '', fp: node.fp || 'chrome', alpn: node.alpn || 'http/1.1' });
+  if (node.reality_pbk) {
+    add('VLESS-REALITY', 'VLESS Reality', { protocol: 'vless', network: 'tcp', security: 'reality', path: '', host: '', sni: node.sni || node.address || '', fp: 'chrome', flow: 'xtls-rprx-vision', reality_pbk: node.reality_pbk, reality_sid: node.reality_sid || '', reality_spx: node.reality_spx || '' });
+  }
+  add('Shadowsocks', 'Shadowsocks', { protocol: 'ss', network: 'tcp', security: 'none', ss_method: node.ss_method || 'aes-256-gcm', ss_password: node.ss_password || '' });
   return out;
 }
 
@@ -516,6 +546,9 @@ app.post('/api/setup', function (req, res) {
   const pw = String((req.body && req.body.password) || '');
   if (pw.length < 4) return res.status(400).json({ detail: 'password too short (min 4 chars)' });
   STATE.settings.admin_hash = sha256(pw);
+  if (!STATE.users.length) {
+    STATE.users.push({ id: newId(), username: 'default', uuid: crypto.randomUUID(), sub_key: newSubKey(), traffic_limit_gb: 0, traffic_used_gb: 0, expires_at: '', enabled: true, note: '🍓 کاربر پیش‌فرض — خودکار (الگوی Blue Knight)', created_at: nowIso() });
+  }
   markDirty(); saveState(true);
   const token = crypto.randomBytes(32).toString('base64url');
   SESSIONS.set(token, Date.now() + SESSION_TTL);
@@ -572,8 +605,7 @@ app.get('/api/users', requireAuth, function (req, res) {
 });
 app.post('/api/users', requireAuth, function (req, res) {
   const b = req.body || {};
-  const username = String(b.username || '').trim();
-  if (!username) return res.status(400).json({ detail: 'username required' });
+  const username = String(b.username || '').trim() || ('user-' + crypto.randomBytes(4).toString('hex'));
   if (STATE.users.some(function (u) { return u.username === username; })) return res.status(400).json({ detail: 'username exists' });
   const user = {
     id: newId(), username: username, uuid: String(b.uuid || crypto.randomUUID()),
@@ -644,6 +676,25 @@ app.get('/api/users/:id/qr', requireAuth, async function (req, res) {
   if (!u) return res.status(404).json({ detail: 'user not found' });
   const png = await qrPng(subBase(req) + '/api/sub/' + u.sub_key);
   res.type('png').send(png);
+});
+
+app.get('/api/users/:id/variants', requireAuth, function (req, res) {
+  const u = findUser(req.params.id);
+  if (!u) return res.status(404).json({ detail: 'user not found' });
+  const base = subBase(req);
+  const variants = [];
+  STATE.nodes.forEach(function (n) {
+    if (n.enabled === false) return;
+    buildVariants(u, n).forEach(function (v) { variants.push(v); });
+  });
+  res.json({
+    ok: true, user: publicUser(u),
+    sub_url: base + '/api/sub/' + u.sub_key,
+    page_url: base + '/p/' + u.sub_key,
+    qr_url: base + '/api/sub/' + u.sub_key + '/qr',
+    lb_url: base + '/api/lb/sub/' + u.sub_key,
+    variants: variants,
+  });
 });
 
 // ---- nodes ----
@@ -1189,6 +1240,7 @@ function showTab(name) {
   var panes = document.querySelectorAll('.tabpane');
   for (var j = 0; j < panes.length; j++) panes[j].classList.remove('active');
   document.getElementById('pane-' + name).classList.add('active');
+  if (name === 'subs') { fillSubsUsers(); loadVariants(); }
 }
 function logout() { fetch('/api/logout', { method: 'POST' }).then(function () { location.href = '/login'; }).catch(function () { location.href = '/login'; }); }
 function openModal(title, html, wide) {
@@ -1241,7 +1293,7 @@ function renderDashNodes() {
   box.innerHTML = html;
 }
 function loadUsers() {
-  return api('GET', '/api/users').then(function (d) { USERS = d.users; renderUsers(); });
+  return api('GET', '/api/users').then(function (d) { USERS = d.users; renderUsers(); fillSubsUsers(); });
 }
 function renderUsers() {
   var q = (document.getElementById('user-search').value || '').toLowerCase();
@@ -1272,6 +1324,18 @@ function findU(id) { for (var i = 0; i < USERS.length; i++) if (USERS[i].id === 
 function findN(id) { for (var i = 0; i < NODES.length; i++) if (NODES[i].id === id) return NODES[i]; return null; }
 function openUserModal(id) {
   var u = id ? findU(id) : null;
+  if (!u) {
+    openModal('➕ کاربر جدید (سریع)',
+      '<div class="muted" style="font-size:.8rem;margin-bottom:8px">اسم کاربر خودکار ساخته می‌شه — فقط حجم و انقضا رو بده، بقیه‌اش خودکاره 🍓</div>' +
+      '<label class="lbl">نام کاربری (خالی = خودکار)</label>' +
+      '<input id="f-username" value="" placeholder="user-1a2b3c4d">' +
+      '<div class="form-grid"><div><label class="lbl">سقف ترافیک (گیگ، 0 = نامحدود ♾️)</label>' +
+      '<input id="f-limit" type="number" min="0" step="0.5" value="0"></div></div>' +
+      '<label class="lbl">انقضا (خالی = نامحدود)</label>' +
+      '<input id="f-exp" type="datetime-local" value="">' +
+      '<div class="mfoot"><button class="btn green" onclick="saveUser()">💾 ایجاد و نمایش ساب</button></div>');
+    return;
+  }
   var usedRow = u ? '<div><label class="lbl">ترافیک مصرف‌شده (گیگ)</label><input id="f-used" type="number" min="0" step="0.1" value="' + u.traffic_used_gb + '"></div>' : '';
   var extraBtns = u ? '<button class="btn ghost" onclick="resetTraffic(\\'' + u.id + '\\')">🔄 ریست ترافیک</button><button class="btn ghost" onclick="rotateSub(\\'' + u.id + '\\')">🎲 لینک ساب جدید</button>' : '';
   openModal(u ? '✏️ ویرایش ' + u.username : '➕ کاربر جدید',
@@ -1297,13 +1361,82 @@ function saveUser(id) {
     enabled: document.getElementById('f-enabled').checked,
   };
   if (id && usedEl) body.traffic_used_gb = parseFloat(val('f-used')) || 0;
-  if (!body.username) { toast('❌ اسم کاربر لازمه!', true); return; }
-  (id ? api('PATCH', '/api/users/' + id, body) : api('POST', '/api/users', body)).then(function () {
+  if (id && !body.username) { toast('❌ اسم کاربر لازمه!', true); return; }
+  (id ? api('PATCH', '/api/users/' + id, body) : api('POST', '/api/users', body)).then(function (r) {
     closeModal();
     return loadUsers().then(loadServerInfo).then(function () {
       toast(id ? '✏️ ذخیره شد!' : '🎉 کاربر ساخته شد! ساداهارو دم تکون داد 🐶');
+      if (!id && r && r.user) { SUBS_USER = r.user.id; showTab('subs'); loadVariants(); }
     });
   }).catch(function (e) { toast('❌ ' + e.message, true); });
+}
+var SUBS_USER = '';
+var VARIANTS_CACHE = [];
+function fillSubsUsers() {
+  var s = document.getElementById('subs-user');
+  if (!s) return;
+  var cur = SUBS_USER;
+  var def = null;
+  USERS.forEach(function (u) { if (u.username === 'default' && !def) def = u; });
+  if (!cur) cur = def ? def.id : (USERS.length ? USERS[0].id : '');
+  var html = '';
+  USERS.forEach(function (u) {
+    html += '<option value="' + u.id + '"' + (u.id === cur ? ' selected' : '') + '>' + esc(u.username) + (u.username === 'default' ? ' (پیش‌فرض)' : '') + '</option>';
+  });
+  s.innerHTML = html;
+  SUBS_USER = cur;
+  s.value = cur;
+}
+function loadVariants() {
+  var box = document.getElementById('subs-variants');
+  if (!SUBS_USER) { if (box) box.innerHTML = '<span class="muted">هنوز کاربری نیست… اول یه کاربر بساز 🍓</span>'; return; }
+  if (box) box.innerHTML = '<span class="muted">⏳ در حال بارگذاری…</span>';
+  api('GET', '/api/users/' + SUBS_USER + '/variants').then(renderSubs).catch(function (e) { if (box) box.innerHTML = '❌ ' + esc(e.message); });
+}
+function renderSubs(d) {
+  var urls = document.getElementById('subs-urls');
+  if (urls) {
+    urls.innerHTML =
+      '<div class="link-row"><span class="meta">🔗 لینک ساب (base64)</span><code>' + esc(d.sub_url) + '</code><button class="btn small blue" id="subs-cp-sub">📋</button></div>' +
+      '<div class="link-row"><span class="meta">🌐 صفحه اشتراک</span><code>' + esc(d.page_url) + '</code><a class="btn small ghost" href="' + esc(d.page_url) + '" target="_blank">↗️</a></div>' +
+      '<div class="link-row"><span class="meta">⚖️ لودبالانسر</span><code>' + esc(d.lb_url) + '</code><button class="btn small gold" id="subs-cp-lb">📋</button></div>' +
+      '<div class="qr-box" data-qr="' + esc(d.sub_url) + '"></div>';
+    document.getElementById('subs-cp-sub').onclick = function () { copyText(d.sub_url, '🔗 کپی شد!'); };
+    document.getElementById('subs-cp-lb').onclick = function () { copyText(d.lb_url, '⚖️ کپی شد!'); };
+    renderQr();
+  }
+  var box = document.getElementById('subs-variants');
+  if (!box) return;
+  VARIANTS_CACHE = d.variants || [];
+  if (!VARIANTS_CACHE.length) { box.innerHTML = '<span class="muted">نودی نیست… یه نود بساز 🛰</span>'; return; }
+  var order = [];
+  var byNode = {};
+  VARIANTS_CACHE.forEach(function (v) {
+    if (!byNode[v.node]) { byNode[v.node] = []; order.push(v.node); }
+    byNode[v.node].push(v);
+  });
+  var html = '';
+  var gi = 0;
+  order.forEach(function (nodeName) {
+    var vs = byNode[nodeName];
+    html += '<div class="card" style="margin-top:12px"><div class="head"><span>🛰 ' + esc(nodeName) + '</span><span class="muted">' + vs.length + ' پروتکل</span></div>';
+    vs.forEach(function (v) {
+      var idx = gi++;
+      html += '<div class="link-row"><span class="meta">' + esc(v.name) + ' <span class="badge info">' + esc(v.protocol) + '/' + esc(v.network) + '</span></span>' +
+        '<code>' + esc(v.link.slice(0, 64)) + '…</code>' +
+        '<button class="btn small" onclick="copyVariant(' + idx + ')">📋</button>' +
+        '<button class="btn small ghost" onclick="showVariantQr(' + idx + ')">🖼</button></div>';
+    });
+    html += '</div>';
+  });
+  box.innerHTML = html;
+}
+function copyVariant(i) { if (VARIANTS_CACHE[i]) copyText(VARIANTS_CACHE[i].link, '📋 کپی شد!'); }
+function showVariantQr(i) {
+  var v = VARIANTS_CACHE[i];
+  if (!v) return;
+  openModal('🖼 QR — ' + v.name, '<div class="qr-box" data-qr="' + esc(v.link) + '"></div>');
+  renderQr();
 }
 function delUser(id) {
   var u = findU(id);
@@ -1576,6 +1709,7 @@ const PANEL_PAGE = `<!DOCTYPE html>
   <div class="tabs">
     <button class="tab active" data-tab="dash" onclick="showTab('dash')">📊 داشبورد</button>
     <button class="tab" data-tab="users" onclick="showTab('users')">👥 کاربران</button>
+    <button class="tab" data-tab="subs" onclick="showTab('subs')">🔗 ساب</button>
     <button class="tab" data-tab="nodes" onclick="showTab('nodes')">🛰 نودها</button>
     <button class="tab" data-tab="lb" onclick="showTab('lb')">⚖️ لودبالانسر</button>
     <button class="tab" data-tab="tools" onclick="showTab('tools')">🛠 ابزار</button>
@@ -1619,6 +1753,19 @@ const PANEL_PAGE = `<!DOCTYPE html>
           <tbody id="users-body"><tr><td colspan="5" class="muted">در حال بارگذاری…</td></tr></tbody>
         </table>
       </div>
+    </div>
+  </div>
+  <div class="tabpane" id="pane-subs">
+    <div class="card">
+      <div class="toolbar">
+        <h3 style="margin:0">🔗 ساب + همه پروتکل‌ها</h3>
+        <div class="spacer"></div>
+        <select id="subs-user" onchange="loadVariants()"></select>
+        <button class="btn small ghost" onclick="loadVariants()">🔄</button>
+      </div>
+      <div class="muted" style="font-size:.8rem;margin:6px 0 10px">الگوی Blue Knight Panel V3 — همه پروتکل و ترانسپورتر برای هر نود. بعد از ساخت کاربر خودکار اینجا میاد 🍓</div>
+      <div id="subs-urls"></div>
+      <div id="subs-variants"><span class="muted">…</span></div>
     </div>
   </div>
   <div class="tabpane" id="pane-nodes">

@@ -1,6 +1,6 @@
 {
   "name": "yorozuya-panel",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "description": "YorozuyaPanel Node.js single-file edition - lightweight config panel with Gintama soul",
   "main": "index.js",
   "scripts": {
