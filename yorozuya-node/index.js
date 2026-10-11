@@ -23,7 +23,7 @@
  *  original. Fan-made Gintama theme, not affiliated with publishers.
  * ====================================================================
  */
-const Y_VERSION = '1.3.0';
+const Y_VERSION = '1.3.1';
 
 const express = require('express');
 const QRCode = require('qrcode');
@@ -446,6 +446,35 @@ function buildVariants(user, node) {
   return out;
 }
 
+// ============ BLUE KNIGHT AUTO NODE (default node = this server itself, real port — never 443) ============
+function defaultNodeFor(req) {
+  let host = '';
+  if (Y_CONFIG.publicUrl) {
+    try { host = new URL(Y_CONFIG.publicUrl).hostname; } catch (e) { host = Y_CONFIG.publicUrl.split(':')[0]; }
+  }
+  if (!host) {
+    const h = String(req.get('x-forwarded-host') || req.get('host') || '').split(':')[0];
+    host = h || '127.0.0.1';
+  }
+  return {
+    id: newId(), name: 'default', address: host, port: Y_CONFIG.port,
+    protocol: 'vless', network: 'ws', security: 'tls',
+    sni: host, path: '/', host: '', fp: 'chrome', alpn: 'http/1.1',
+    reality_pbk: '', reality_sid: '', reality_spx: '', flow: '',
+    ss_method: 'aes-256-gcm', ss_password: '',
+    enabled: true, created_at: nowIso(),
+    last_check: '', online: null, latency_ms: null, resolved_ip: '', country: '', country_code: '',
+  };
+}
+function ensureDefaultNode(req) {
+  if (STATE.nodes.length) return null;
+  const node = defaultNodeFor(req);
+  STATE.nodes.push(node);
+  markDirty();
+  checkNode(node).then(function () { saveState(false); }).catch(function () {});
+  return node;
+}
+
 // ============ LOAD BALANCER (real balancing across healthy nodes) ============
 const LB_STRATEGIES = ['round-robin', 'least-latency', 'random'];
 function lbState() {
@@ -549,6 +578,7 @@ app.post('/api/setup', function (req, res) {
   if (!STATE.users.length) {
     STATE.users.push({ id: newId(), username: 'default', uuid: crypto.randomUUID(), sub_key: newSubKey(), traffic_limit_gb: 0, traffic_used_gb: 0, expires_at: '', enabled: true, note: '🍓 کاربر پیش‌فرض — خودکار (الگوی Blue Knight)', created_at: nowIso() });
   }
+  ensureDefaultNode(req);
   markDirty(); saveState(true);
   const token = crypto.randomBytes(32).toString('base64url');
   SESSIONS.set(token, Date.now() + SESSION_TTL);
@@ -614,6 +644,7 @@ app.post('/api/users', requireAuth, function (req, res) {
     enabled: b.enabled !== false, note: String(b.note || ''), created_at: nowIso(),
   };
   STATE.users.push(user);
+  ensureDefaultNode(req);
   markDirty();
   res.json({ ok: true, user: publicUser(user) });
 });
