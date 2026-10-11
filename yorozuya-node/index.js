@@ -23,7 +23,7 @@
  *  original. Fan-made Gintama theme, not affiliated with publishers.
  * ====================================================================
  */
-const Y_VERSION = '1.2.0';
+const Y_VERSION = '1.2.1';
 
 const express = require('express');
 const QRCode = require('qrcode');
@@ -40,7 +40,7 @@ const Y_CONFIG = {
   kanji: '万事屋',
   port: parseInt(process.env.PORT || process.env.SERVER_PORT || '8080', 10) || 8080,
   adminPassword: process.env.ADMIN_PASSWORD || '', // optional override; first-run setup otherwise
-  publicUrl: String(process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || process.env.DOMAIN || '').replace(/\/+$/, ''),
+  publicUrl: String(process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || process.env.APP_URL || process.env.DOMAIN || process.env.RAILWAY_PUBLIC_DOMAIN || '').replace(/\/+$/, ''),
   keepaliveMinutes: parseFloat(process.env.KEEPALIVE_MINUTES !== undefined ? process.env.KEEPALIVE_MINUTES : '10') || 0,
   nodeCheckMinutes: parseFloat(process.env.NODE_CHECK_MINUTES !== undefined ? process.env.NODE_CHECK_MINUTES : '5') || 0,
   dataDirHint: process.env.DATA_DIR || '',
@@ -1823,6 +1823,29 @@ const SUB_PAGE = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ============ STARTUP ADDRESS (domain from env → auto-detected public IP → localhost; port always obeys PORT/SERVER_PORT) ============
+async function detectPublicIp() {
+  try {
+    const d = await fetchJson('http://ip-api.com/json/?fields=query', null, 4000);
+    if (d && d.query) return String(d.query);
+  } catch (e) {}
+  try {
+    const c = new AbortController();
+    const t = setTimeout(function () { c.abort(); }, 4000);
+    const r = await fetch('https://api.ipify.org', { signal: c.signal });
+    clearTimeout(t);
+    const txt = (await r.text()).trim();
+    if (r.ok && txt) return txt;
+  } catch (e) {}
+  return '';
+}
+async function startupBase() {
+  if (Y_CONFIG.publicUrl) return Y_CONFIG.publicUrl;
+  const ip = await detectPublicIp();
+  if (ip) return 'http://' + ip + ':' + Y_CONFIG.port;
+  return 'http://localhost:' + Y_CONFIG.port;
+}
+
 // ============ START ============
 function shutdown() { try { saveState(true); } catch (e) {} process.exit(0); }
 process.on('SIGTERM', shutdown);
@@ -1830,15 +1853,19 @@ process.on('SIGINT', shutdown);
 
 if (require.main === module) {
   app.listen(Y_CONFIG.port, '0.0.0.0', function () {
-    const base = Y_CONFIG.publicUrl || ('http://localhost:' + Y_CONFIG.port);
     console.log('🍓 YorozuyaPanel Node v' + Y_VERSION + ' · 万事屋');
     console.log('⚙️  protocols ready: vless · vmess · trojan · ss');
     console.log('🌐 listening on 0.0.0.0:' + Y_CONFIG.port + ' · data: ' + DATA_DIR);
-    if (!passwordSet()) console.log('🔐 first run — set admin password at ' + base + '/setup');
-    else if (DEFAULT_PASSWORD) console.log('⚠️  default password active — change ADMIN_PASSWORD!');
-    if (Y_CONFIG.keepaliveMinutes > 0) console.log('⏰ keep-alive cron: self-ping every ' + Y_CONFIG.keepaliveMinutes + ' min');
-    console.log('📍 Web Panel path: /panel  →  ' + base + '/panel');
+    // Web Panel path: domain from env → auto-detected public IP → localhost (port obeys PORT/SERVER_PORT)
+    startupBase().then(function (base) {
+      if (!passwordSet()) console.log('🔐 first run — set admin password at ' + base + '/setup');
+      else if (DEFAULT_PASSWORD) console.log('⚠️  default password active — change ADMIN_PASSWORD!');
+      if (Y_CONFIG.keepaliveMinutes > 0) console.log('⏰ keep-alive cron: self-ping every ' + Y_CONFIG.keepaliveMinutes + ' min');
+      console.log('📍 Web Panel path: /panel  →  ' + base + '/panel');
+    }).catch(function () {
+      console.log('📍 Web Panel path: /panel  →  http://localhost:' + Y_CONFIG.port + '/panel');
+    });
   });
 }
 
-module.exports = { app: app, Y_CONFIG: Y_CONFIG };
+module.exports = { app: app, Y_CONFIG: Y_CONFIG, detectPublicIp: detectPublicIp, startupBase: startupBase };
